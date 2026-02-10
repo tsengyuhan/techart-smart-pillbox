@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>智慧藥盒遙控器</title>
+    <style>
+        /* 這裡只是為了讓按鈕好看一點，不用太在意 */
+        body {
+            font-family: sans-serif;
+            text-align: center;
+            padding: 20px;
+            background-color: #f0f2f5;
+        }
+
+        .container {
+            max-width: 400px;
+            margin: 0 auto;
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        h1 {
+            color: #333;
+        }
+
+        .status-box {
+            font-size: 24px;
+            margin: 20px 0;
+            padding: 15px;
+            background: #e8f0fe;
+            border-radius: 10px;
+            color: #1967d2;
+        }
+
+        .btn {
+            display: block;
+            width: 100%;
+            padding: 15px;
+            margin: 10px 0;
+            font-size: 20px;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .btn-feed {
+            background-color: #34a853;
+            color: white;
+        }
+
+        /* 綠色按鈕 */
+        .btn-feed:active {
+            background-color: #2e8b46;
+        }
+
+        .btn-stop {
+            background-color: #ea4335;
+            color: white;
+        }
+
+        /* 紅色按鈕 */
+        .btn-stop:active {
+            background-color: #c5221f;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="container">
+        <h1>💊 藥盒控制中心</h1>
+
+        <div id="statusText" class="status-box">連線中...</div>
+
+        <button id="btnFeed" class="btn btn-feed">讓藥盒出藥 (ON)</button>
+        <button id="btnStop" class="btn btn-stop">強制停止 (OFF)</button>
+    </div>
+
+    <script type="module">
+        // 匯入必要的函式
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js";
+        import { getDatabase, ref, set, onValue }
+            from "https://www.gstatic.com/firebasejs/9.22.0/firebase-database.js";
+
+        // --------------------------------------------------------
+        // TODO: 請將下方的設定換成你自己的！
+        // (在 Firebase Console -> 專案設定 -> 一般 -> 下方的 SDK 設定與配置)
+        // --------------------------------------------------------
+        const firebaseConfig = {
+            apiKey: "AIzaSyBbp0kENACTRcVmV2PZW8Q2pHNtMdGhbZ0",
+            authDomain: "smart-pillbox-23113.firebaseapp.com",
+            databaseURL: "https://smart-pillbox-23113-default-rtdb.firebaseio.com",
+            projectId: "smart-pillbox-23113",
+            storageBucket: "smart-pillbox-23113.firebasestorage.app",
+            messagingSenderId: "228363023113",
+            appId: "1:228363023113:web:1522c20f1e29f2029499d8"
+        };
+
+        // 1. 初始化 Firebase
+        const app = initializeApp(firebaseConfig);
+        const db = getDatabase(app);
+
+        // 2. 定義我們要控制的資料路徑
+        const commandRef = ref(db, 'command');
+
+        // 3. 監聽狀態 (當資料庫變動時，網頁上的字也要跟著變)
+        onValue(commandRef, (snapshot) => {
+            const data = snapshot.val();
+            const statusText = document.getElementById("statusText");
+
+            if (data === 1) {
+                statusText.innerText = "狀態：馬達轉動中 🔄";
+                statusText.style.color = "#ea4335"; // 紅色字
+            } else {
+                statusText.innerText = "狀態：待機中 ✅";
+                statusText.style.color = "#34a853"; // 綠色字
+            }
+        });
+
+        // 4. 按鈕功能：按下「出藥」
+        document.getElementById("btnFeed").addEventListener("click", () => {
+            set(commandRef, 1); // 把 command 改成 1
+        });
+
+        // 5. 按鈕功能：按下「停止」
+        document.getElementById("btnStop").addEventListener("click", () => {
+            set(commandRef, 0); // 把 command 改成 0
+        });
+
+    </script>
+</body>
+
+</html>
