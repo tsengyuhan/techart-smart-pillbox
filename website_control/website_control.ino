@@ -240,9 +240,33 @@ void setup() {
   Firebase.reconnectWiFi(true);
   firebaseReady = true;
 
-  // [新增] 開機時，先把雲端的指令清空，避免一上電就亂動
+  // [修正] 開機時的指令處理策略：
+  // 1. 先讀取當前指令（如果存在）
+  // 2. 記錄它的 ID（但不執行），這樣 loop() 會自動過濾
+  // 3. 清空雲端指令
+  // 4. 延遲確保操作完成
+  
+  Serial.println("🔍 檢查雲端是否有舊指令...");
+  if (Firebase.RTDB.getString(&fbdo, "/pillbox/command")) {
+    String oldCommand = fbdo.stringData();
+    
+    // 如果有舊指令且格式正確（包含逗號和 ID）
+    if (oldCommand != "" && oldCommand.indexOf(',') > 0) {
+      int commaIndex = oldCommand.indexOf(',');
+      String oldID = oldCommand.substring(commaIndex + 1);
+      
+      // 記錄這個 ID，讓 loop() 自動忽略它
+      lastCommandID = oldID;
+      Serial.print("⚠️  發現舊指令 ID: ");
+      Serial.print(oldID);
+      Serial.println(" -> 已標記為過濾");
+    }
+  }
+  
+  // 清空雲端指令（即使非阻塞，ID 過濾機制也能保護）
   Firebase.RTDB.setString(&fbdo, "/pillbox/command", "");
-  Serial.println("✨ 系統就緒：已清除舊指令");
+  
+  Serial.println("✨ 系統就緒：舊指令已過濾，準備接收新指令");
 }
 
 // ==========================================
