@@ -170,6 +170,17 @@
             background: linear-gradient(135deg, #5568d3 0%, #653a8b 100%);
         }
 
+        .btn-test {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            color: white;
+            width: 100%;
+            margin-top: 10px;
+        }
+
+        .btn-test:hover {
+            background: linear-gradient(135deg, #d97fe8 0%, #dc4459 100%);
+        }
+
         /* 讀取中遮罩 */
         #loading {
             text-align: center;
@@ -239,6 +250,7 @@
 
         <div style="margin-top: 20px; margin-bottom: 5px;">系統控制</div>
         <button class="btn-home" onclick="sendCommand('HOME')">🏠 回歸原點</button>
+        <button class="btn-test" onclick="sendCommand('TEST_DISPENSE')">🧪 出藥測試</button>
 
     </div>
 

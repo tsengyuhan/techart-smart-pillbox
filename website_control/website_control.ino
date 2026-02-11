@@ -68,8 +68,10 @@ const int HALL_THRESHOLD = 1500;  // 根據實測調整
 bool movingCupState = false;
 
 // --- 馬達參數 ---
-const int MOVE_STEPS = 200;
+const int MOVE_STEPS = 30;
 const int SENSOR_THRESHOLD = 2400;  // 推桿底部遮斷器門檻
+const int STEPS_PER_POSITION = 533; // 每個位置間隔步數（60度，3200➗ 6）
+const int DISPENSE_POSITIONS = 6;   // 總共 6 個位置
 
 // --- 物件宣告 ---
 AccelStepper diskMotor(AccelStepper::DRIVER, M1_PUL_PIN, M1_DIR_PIN);
@@ -171,33 +173,170 @@ void executeCommand(String cmd) {
   } else if (cmd == "HOME") {
     Serial.println("開始回歸原點...");
     
-    // 階段 1: 推桿下降至底部
+    // ===== 階段 1: 推桿下降至底部 =====
     Serial.println("  階段 1: 推桿下降");
-    pusherMotor.move(MOVE_STEPS);
-    while (pusherMotor.distanceToGo() != 0) {
+    
+    // 步驟 1.1: 快速下降直到觸發感測器
+    pusherMotor.setSpeed(500);
+    while (true) {
+      if (analogRead(SENSOR2_PIN) > SENSOR_THRESHOLD) {
+        pusherMotor.stop();
+        break;
+      }
+      pusherMotor.runSpeed();
+    }
+    
+    // 步驟 1.2: 後退一點點（離開觸發區）
+    pusherMotor.move(-100);
+    while (pusherMotor.distanceToGo() != 0) pusherMotor.run();
+    delay(100);
+    
+    // 步驟 1.3: 慢速精確歸零
+    pusherMotor.setSpeed(100);  // 慢速
+    while (true) {
       if (analogRead(SENSOR2_PIN) > SENSOR_THRESHOLD) {
         pusherMotor.stop();
         pusherMotor.setCurrentPosition(0);
-        Serial.println("  ✓ 推桿已歸零");
+        Serial.println("  ✓ 推桿已精確歸零");
         break;
       }
-      pusherMotor.run();
+      pusherMotor.runSpeed();
     }
     
-    // 階段 2: 圓盤逆時針旋轉至原點
+    // ===== 階段 2: 圓盤順時針旋轉至原點 =====
     Serial.println("  階段 2: 圓盤旋轉");
-    diskMotor.move(-2000);  // 設定足夠大的步數
-    while (diskMotor.distanceToGo() != 0) {
+    
+    // 步驟 2.1: 快速旋轉直到觸發感測器
+    diskMotor.setSpeed(500);
+    while (true) {
       if (analogRead(SENSOR1_PIN) > SENSOR_THRESHOLD) {
         diskMotor.stop();
-        diskMotor.setCurrentPosition(0);
-        Serial.println("  ✓ 圓盤已歸零");
         break;
       }
-      diskMotor.run();
+      diskMotor.runSpeed();
     }
     
+    // 步驟 2.2: 後退一點點（離開觸發區）
+    diskMotor.move(-100);
+    while (diskMotor.distanceToGo() != 0) diskMotor.run();
+    delay(100);
+    
+    // 步驟 2.3: 慢速精確歸零
+    diskMotor.setSpeed(100);  // 慢速
+    while (true) {
+      if (analogRead(SENSOR1_PIN) > SENSOR_THRESHOLD) {
+        diskMotor.stop();
+        Serial.println("  ✓ 圓盤觸發感測器");
+        break;
+      }
+      diskMotor.runSpeed();
+    }
+    
+    // 步驟 2.4: 後退到真正原點
+    diskMotor.move(-30);
+    while (diskMotor.distanceToGo() != 0) diskMotor.run();
+    diskMotor.setCurrentPosition(0);
+    Serial.println("  ✓ 圓盤已精確歸零");
+    
     Serial.println("✅ 回歸原點完成");
+  } else if (cmd == "TEST_DISPENSE") {
+    Serial.println("🧪 開始出藥測試...");
+    
+    // 步驟 1: 回歸原點
+    Serial.println("　步驟 1: 回歸原點");
+    
+    // 推桿歸零
+    pusherMotor.setSpeed(500);
+    while (true) {
+      if (analogRead(SENSOR2_PIN) > SENSOR_THRESHOLD) {
+        pusherMotor.stop();
+        break;
+      }
+      pusherMotor.runSpeed();
+    }
+    pusherMotor.move(-100);
+    while (pusherMotor.distanceToGo() != 0) pusherMotor.run();
+    delay(100);
+    pusherMotor.setSpeed(100);
+    while (true) {
+      if (analogRead(SENSOR2_PIN) > SENSOR_THRESHOLD) {
+        pusherMotor.stop();
+        pusherMotor.setCurrentPosition(0);
+        break;
+      }
+      pusherMotor.runSpeed();
+    }
+    
+    // 圓盤歸零
+    diskMotor.setSpeed(500);
+    while (true) {
+      if (analogRead(SENSOR1_PIN) > SENSOR_THRESHOLD) {
+        diskMotor.stop();
+        break;
+      }
+      diskMotor.runSpeed();
+    }
+    diskMotor.move(-100);
+    while (diskMotor.distanceToGo() != 0) diskMotor.run();
+    delay(100);
+    diskMotor.setSpeed(100);
+    while (true) {
+      if (analogRead(SENSOR1_PIN) > SENSOR_THRESHOLD) {
+        diskMotor.stop();
+        break;
+      }
+      diskMotor.runSpeed();
+    }
+    diskMotor.move(-30);
+    while (diskMotor.distanceToGo() != 0) diskMotor.run();
+    diskMotor.setCurrentPosition(0);
+    Serial.println("　✓ 已回歸原點");
+    
+    // 步驟 2: 循環 6 個位置
+    for (int i = 1; i <= DISPENSE_POSITIONS; i++) {
+      Serial.print("　位置 ");
+      Serial.print(i);
+      Serial.print("/");
+      Serial.println(DISPENSE_POSITIONS);
+      
+      // 轉到下一個位置
+      diskMotor.move(STEPS_PER_POSITION);
+      while (diskMotor.distanceToGo() != 0) diskMotor.run();
+      
+      // 停留 1 秒
+      delay(1000);
+    }
+    
+    Serial.println("　已完成 6 個位置測試");
+    
+    // 步驟 3: 再次回歸原點
+    Serial.println("　步驟 2: 再次回歸原點");
+    
+    // 圓盤歸零
+    diskMotor.setSpeed(500);
+    while (true) {
+      if (analogRead(SENSOR1_PIN) > SENSOR_THRESHOLD) {
+        diskMotor.stop();
+        break;
+      }
+      diskMotor.runSpeed();
+    }
+    diskMotor.move(-100);
+    while (diskMotor.distanceToGo() != 0) diskMotor.run();
+    delay(100);
+    diskMotor.setSpeed(100);
+    while (true) {
+      if (analogRead(SENSOR1_PIN) > SENSOR_THRESHOLD) {
+        diskMotor.stop();
+        break;
+      }
+      diskMotor.runSpeed();
+    }
+    diskMotor.move(-30);
+    while (diskMotor.distanceToGo() != 0) diskMotor.run();
+    diskMotor.setCurrentPosition(0);
+    
+    Serial.println("✅ 出藥測試完成");
   } else if (cmd == "FAN_ON") digitalWrite(FAN_PIN, HIGH);
   else if (cmd == "FAN_OFF") digitalWrite(FAN_PIN, LOW);
   else if (cmd == "LED_ON") digitalWrite(LED_STRIP_PIN, HIGH);
