@@ -70,7 +70,7 @@ bool movingCupState = false;
 // --- 馬達參數 ---
 const int MOVE_STEPS = 30;
 const int SENSOR_THRESHOLD = 2400;  // 推桿底部遮斷器門檻
-const int STEPS_PER_POSITION = 533; // 每個位置間隔步數（60度，3200➗ 6）
+const int STEPS_PER_POSITION = 1067; // 每個位置間隔步數（60度，3200➗ 6）
 const int DISPENSE_POSITIONS = 6;   // 總共 6 個位置
 
 // --- 物件宣告 ---
@@ -294,17 +294,59 @@ void executeCommand(String cmd) {
     
     // 步驟 2: 循環 6 個位置
     for (int i = 1; i <= DISPENSE_POSITIONS; i++) {
-      Serial.print("　位置 ");
+      Serial.print("  位置 ");
       Serial.print(i);
       Serial.print("/");
       Serial.println(DISPENSE_POSITIONS);
       
-      // 轉到下一個位置
+      // 2.1 轉到下一個位置
       diskMotor.move(STEPS_PER_POSITION);
       while (diskMotor.distanceToGo() != 0) diskMotor.run();
       
+      // 2.2 推桿向上推（出藥動作）
+      Serial.println("    → 推桿上升（出藥）");
+      pusherMotor.move(-2500);  // 負值 = 向上
+      while (pusherMotor.distanceToGo() != 0) pusherMotor.run();
+      
       // 停留 1 秒
       delay(1000);
+      
+      // 2.3 推桿回到原點
+      if (i == DISPENSE_POSITIONS) {
+        // 最後一個位置：使用精確歸零
+        Serial.println("    → 推桿精確歸零");
+        
+        // 快速下降直到觸發感測器
+        pusherMotor.setSpeed(500);
+        while (true) {
+          if (analogRead(SENSOR2_PIN) > SENSOR_THRESHOLD) {
+            pusherMotor.stop();
+            break;
+          }
+          pusherMotor.runSpeed();
+        }
+        
+        // 後退一點點
+        pusherMotor.move(-100);
+        while (pusherMotor.distanceToGo() != 0) pusherMotor.run();
+        delay(100);
+        
+        // 慢速精確歸零
+        pusherMotor.setSpeed(100);
+        while (true) {
+          if (analogRead(SENSOR2_PIN) > SENSOR_THRESHOLD) {
+            pusherMotor.stop();
+            pusherMotor.setCurrentPosition(0);
+            break;
+          }
+          pusherMotor.runSpeed();
+        }
+      } else {
+        // 前 5 個位置：簡單下降回原點
+        Serial.println("    → 推桿歸零");
+        pusherMotor.move(2500);  // 下降回原點
+        while (pusherMotor.distanceToGo() != 0) pusherMotor.run();
+      }
     }
     
     Serial.println("　已完成 6 個位置測試");

@@ -1,0 +1,177 @@
+/* CSS 樣式 */
+body {
+    font-family: 'Arial', sans-serif;
+    background-color: #f0f2f5;
+    display: flex;
+    justify-content: center;
+    padding: 20px;
+}
+
+.container {
+    background: white;
+    padding: 30px;
+    border-radius: 15px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+    width: 100%;
+    max-width: 500px;
+}
+
+h1 {
+    text-align: center;
+    color: #333;
+}
+
+h2 {
+    border-bottom: 2px solid #eee;
+    padding-bottom: 10px;
+    color: #555;
+    margin-top: 30px;
+}
+
+/* 狀態顯示區塊 */
+.status-box {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 20px;
+    background: #e8f5e9;
+    padding: 15px;
+    border-radius: 8px;
+}
+
+.status-item {
+    text-align: center;
+}
+
+.status-value {
+    font-size: 1.5em;
+    font-weight: bold;
+    color: #2e7d32;
+}
+
+/* 藥杯指示燈 */
+.cups-container {
+    display: flex;
+    justify-content: space-around;
+    margin: 20px 0;
+}
+
+.cup-indicator {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background-color: #ddd;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    color: white;
+    transition: 0.3s;
+    border: 2px solid #ccc;
+}
+
+.cup-indicator.active {
+    background-color: #4CAF50;
+    border-color: #388E3C;
+    box-shadow: 0 0 10px #4CAF50;
+}
+
+.cup-indicator.inactive {
+    background-color: #e0e0e0;
+    color: #aaa;
+}
+
+/* 霍爾感測器 */
+.hall-status {
+    text-align: center;
+    padding: 10px;
+    margin-top: 10px;
+    border-radius: 5px;
+    font-weight: bold;
+}
+
+.hall-active {
+    background-color: #ffcdd2;
+    color: #c62828;
+}
+
+.hall-inactive {
+    background-color: #e0e0e0;
+    color: #757575;
+}
+
+/* 控制按鈕區 */
+.control-group {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-bottom: 15px;
+}
+
+button {
+    padding: 15px;
+    border: none;
+    border-radius: 8px;
+    font-size: 16px;
+    cursor: pointer;
+    transition: 0.2s;
+    font-weight: bold;
+}
+
+button:active {
+    transform: scale(0.98);
+}
+
+.btn-motor {
+    background-color: #2196F3;
+    color: white;
+}
+
+.btn-motor:hover {
+    background-color: #1976D2;
+}
+
+.btn-on {
+    background-color: #4CAF50;
+    color: white;
+}
+
+.btn-off {
+    background-color: #f44336;
+    color: white;
+}
+
+.btn-music {
+    background-color: #FF9800;
+    color: white;
+    width: 100%;
+    margin-top: 10px;
+}
+
+.btn-home {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    width: 100%;
+    margin-top: 10px;
+}
+
+.btn-home:hover {
+    background: linear-gradient(135deg, #5568d3 0%, #653a8b 100%);
+}
+
+.btn-test {
+    background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+    color: white;
+    width: 100%;
+    margin-top: 10px;
+}
+
+.btn-test:hover {
+    background: linear-gradient(135deg, #d97fe8 0%, #dc4459 100%);
+}
+
+/* 讀取中遮罩 */
+#loading {
+    text-align: center;
+    color: #666;
+    font-style: italic;
+}
