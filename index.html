@@ -252,8 +252,12 @@
         }
         const db = firebase.database();
 
+        // 變數：記錄最後一次收到訊號的時間
+        let lastHeartbeatTime = 0;
+        const connectionStatusEl = document.getElementById('connection-status');
+
         // ==========================================
-        // 2. 監聽 (Monitor) - 從 Firebase 讀取資料
+        // 2. 監聽 (Monitor)
         // ==========================================
         const monitorRef = db.ref('/pillbox/monitor');
 
@@ -262,15 +266,21 @@
             const data = snapshot.val();
 
             if (data) {
-                // A. 更新溫度
+                // [新增] 更新心跳時間
+                // data.last_seen 是一個很長的時間數字 (毫秒)
+                if (data.last_seen) {
+                    lastHeartbeatTime = Date.now(); // 收到資料了，重置計時
+                    updateConnectionStatus(true);
+                }
+
+                // 更新溫度
                 if (data.temp) {
                     document.getElementById('temp-display').innerText = data.temp + " °C";
                 }
 
-                // B. 更新五點藥杯 (解析字串 "1,0,1,0,1")
+                // 更新藥杯
                 if (data.cups) {
-                    const cupStates = data.cups.split(','); // 變成陣列 ['1', '0', ...]
-
+                    const cupStates = data.cups.split(',');
                     cupStates.forEach((state, index) => {
                         const cupEl = document.getElementById('cup-' + index);
                         if (state === '1') {
@@ -283,9 +293,9 @@
                     });
                 }
 
-                // C. 更新單點霍爾
+                // 更新霍爾
                 const hallEl = document.getElementById('hall-sensor');
-                if (data.hall_sensor === true) { // 注意：ESP32 傳上來的是 boolean
+                if (data.hall_sensor === true) {
                     hallEl.innerText = "🚨 單點霍爾：偵測到磁鐵！";
                     hallEl.classList.add('hall-active');
                     hallEl.classList.remove('hall-inactive');
@@ -294,29 +304,41 @@
                     hallEl.classList.add('hall-inactive');
                     hallEl.classList.remove('hall-active');
                 }
-
-                // 更新連線時間 (可選)
-                document.getElementById('connection-status').innerText = "已連線";
-                document.getElementById('connection-status').style.color = "green";
             }
         });
 
         // ==========================================
-        // 3. 控制 (Control) - 寫入指令到 Firebase
+        // [新增] 3. 斷線偵測計時器 (Watchdog)
+        // 每 1 秒檢查一次，如果超過 6 秒沒收到資料，就顯示斷線
+        // ==========================================
+        setInterval(() => {
+            const now = Date.now();
+            // 如果現在時間 - 上次收到時間 > 6000 毫秒 (6秒)
+            if (now - lastHeartbeatTime > 6000) {
+                updateConnectionStatus(false);
+            }
+        }, 1000);
+
+        function updateConnectionStatus(isOnline) {
+            if (isOnline) {
+                connectionStatusEl.innerText = "🟢 已連線";
+                connectionStatusEl.style.color = "#2e7d32";
+                connectionStatusEl.style.fontWeight = "bold";
+            } else {
+                connectionStatusEl.innerText = "🔴 已斷線 (ESP32 無回應)";
+                connectionStatusEl.style.color = "red";
+                connectionStatusEl.style.fontWeight = "bold";
+                // 斷線時，可以把溫度改成 "--" 提醒使用者
+                // document.getElementById('temp-display').innerText = "-- °C";
+            }
+        }
+
+        // ==========================================
+        // 4. 控制 (Control)
         // ==========================================
         function sendCommand(cmd) {
             console.log("發送指令:", cmd);
-
-            // 寫入 /pillbox/command 路徑
-            // ESP32 讀取後會自動執行並清除此欄位
-            db.ref('/pillbox/command').set(cmd)
-                .then(() => {
-                    // 這裡可以做一些按鈕回饋，例如震動或變色
-                    console.log("指令發送成功");
-                })
-                .catch((error) => {
-                    alert("指令發送失敗: " + error.message);
-                });
+            db.ref('/pillbox/command').set(cmd);
         }
 
     </script>
