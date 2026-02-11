@@ -4,68 +4,170 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>智慧藥盒遙控器</title>
+    <title>ESP32 智慧藥盒控制中心</title>
+
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+
     <style>
-        /* 這裡只是為了讓按鈕好看一點，不用太在意 */
+        /* --- CSS 樣式區 (皮膚) --- */
         body {
-            font-family: sans-serif;
-            text-align: center;
-            padding: 20px;
+            font-family: 'Arial', sans-serif;
             background-color: #f0f2f5;
+            display: flex;
+            justify-content: center;
+            padding: 20px;
         }
 
         .container {
-            max-width: 400px;
-            margin: 0 auto;
             background: white;
             padding: 30px;
             border-radius: 15px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            width: 100%;
+            max-width: 500px;
         }
 
         h1 {
+            text-align: center;
             color: #333;
         }
 
+        h2 {
+            border-bottom: 2px solid #eee;
+            padding-bottom: 10px;
+            color: #555;
+            margin-top: 30px;
+        }
+
+        /* 狀態顯示區塊 */
         .status-box {
-            font-size: 24px;
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 20px;
+            background: #e8f5e9;
+            padding: 15px;
+            border-radius: 8px;
+        }
+
+        .status-item {
+            text-align: center;
+        }
+
+        .status-value {
+            font-size: 1.5em;
+            font-weight: bold;
+            color: #2e7d32;
+        }
+
+        /* 藥杯指示燈 */
+        .cups-container {
+            display: flex;
+            justify-content: space-around;
             margin: 20px 0;
-            padding: 15px;
-            background: #e8f0fe;
-            border-radius: 10px;
-            color: #1967d2;
         }
 
-        .btn {
-            display: block;
-            width: 100%;
+        .cup-indicator {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background-color: #ddd;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            color: white;
+            transition: 0.3s;
+            border: 2px solid #ccc;
+        }
+
+        .cup-indicator.active {
+            background-color: #4CAF50;
+            border-color: #388E3C;
+            box-shadow: 0 0 10px #4CAF50;
+        }
+
+        /* 有杯子 */
+        .cup-indicator.inactive {
+            background-color: #e0e0e0;
+            color: #aaa;
+        }
+
+        /* 沒杯子 */
+
+        /* 霍爾感測器 */
+        .hall-status {
+            text-align: center;
+            padding: 10px;
+            margin-top: 10px;
+            border-radius: 5px;
+            font-weight: bold;
+        }
+
+        .hall-active {
+            background-color: #ffcdd2;
+            color: #c62828;
+        }
+
+        /* 偵測到磁鐵 */
+        .hall-inactive {
+            background-color: #e0e0e0;
+            color: #757575;
+        }
+
+        /* 控制按鈕區 */
+        .control-group {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        button {
             padding: 15px;
-            margin: 10px 0;
-            font-size: 20px;
             border: none;
-            border-radius: 10px;
+            border-radius: 8px;
+            font-size: 16px;
             cursor: pointer;
-            transition: background 0.2s;
+            transition: 0.2s;
+            font-weight: bold;
         }
 
-        .btn-feed {
-            background-color: #34a853;
+        button:active {
+            transform: scale(0.98);
+        }
+
+        .btn-motor {
+            background-color: #2196F3;
             color: white;
         }
 
-        /* 綠色按鈕 */
-        .btn-feed:active {
-            background-color: #2e8b46;
+        .btn-motor:hover {
+            background-color: #1976D2;
         }
 
-        .btn-stop {
-            background-color: #ea4335;
+        .btn-on {
+            background-color: #4CAF50;
             color: white;
         }
 
-        /* 紅色按鈕 */
-        .btn-stop:active {
-            background-color: #c5221f;
+        .btn-off {
+            background-color: #f44336;
+            color: white;
+        }
+
+        .btn-music {
+            background-color: #FF9800;
+            color: white;
+            width: 100%;
+            margin-top: 10px;
+        }
+
+        /* 讀取中遮罩 */
+        #loading {
+            text-align: center;
+            color: #666;
+            font-style: italic;
         }
     </style>
 </head>
@@ -74,23 +176,66 @@
 
     <div class="container">
         <h1>💊 藥盒控制中心</h1>
+        <p id="loading">連線資料庫中...</p>
 
-        <div id="statusText" class="status-box">連線中...</div>
+        <h2>即時監控 (Monitor)</h2>
 
-        <button id="btnFeed" class="btn btn-feed">讓藥盒出藥 (ON)</button>
-        <button id="btnStop" class="btn btn-stop">強制停止 (OFF)</button>
+        <div class="status-box">
+            <div class="status-item">
+                <div>目前溫度</div>
+                <div id="temp-display" class="status-value">-- °C</div>
+            </div>
+            <div class="status-item">
+                <div>連線狀態</div>
+                <div id="connection-status" style="font-size: 1em; color: gray;">等待中...</div>
+            </div>
+        </div>
+
+        <div style="text-align: center; color: #555;">五點藥杯偵測</div>
+        <div class="cups-container">
+            <div id="cup-0" class="cup-indicator">1</div>
+            <div id="cup-1" class="cup-indicator">2</div>
+            <div id="cup-2" class="cup-indicator">3</div>
+            <div id="cup-3" class="cup-indicator">4</div>
+            <div id="cup-4" class="cup-indicator">5</div>
+        </div>
+
+        <div id="hall-sensor" class="hall-status hall-inactive">
+            單點霍爾：無訊號
+        </div>
+
+        <h2>手動控制 (Control)</h2>
+
+        <p style="font-size: 0.8em; color: #888;">* 馬達運轉中請勿連續發送指令</p>
+
+        <div style="margin-bottom: 5px;">圓盤馬達 (M1)</div>
+        <div class="control-group">
+            <button class="btn-motor" onclick="sendCommand('M1_CW')">↻ 正轉 (200步)</button>
+            <button class="btn-motor" onclick="sendCommand('M1_CCW')">↺ 反轉 (200步)</button>
+        </div>
+
+        <div style="margin-bottom: 5px;">推桿馬達 (M2)</div>
+        <div class="control-group">
+            <button class="btn-motor" onclick="sendCommand('M2_UP')">⬆️ 上升 (出藥)</button>
+            <button class="btn-motor" onclick="sendCommand('M2_DOWN')">⬇️ 下降 (歸零)</button>
+        </div>
+
+        <div style="margin-bottom: 5px;">環境控制</div>
+        <div class="control-group">
+            <button class="btn-on" onclick="sendCommand('FAN_ON')">風扇 開</button>
+            <button class="btn-off" onclick="sendCommand('FAN_OFF')">風扇 關</button>
+            <button class="btn-on" onclick="sendCommand('LED_ON')">燈條 開</button>
+            <button class="btn-off" onclick="sendCommand('LED_OFF')">燈條 關</button>
+        </div>
+
+        <button class="btn-music" onclick="sendCommand('PLAY_MUSIC')">🎵 播放測試音效</button>
+
     </div>
 
-    <script type="module">
-        // 匯入必要的函式
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js";
-        import { getDatabase, ref, set, onValue }
-            from "https://www.gstatic.com/firebasejs/9.22.0/firebase-database.js";
-
-        // --------------------------------------------------------
-        // TODO: 請將下方的設定換成你自己的！
-        // (在 Firebase Console -> 專案設定 -> 一般 -> 下方的 SDK 設定與配置)
-        // --------------------------------------------------------
+    <script>
+        // ==========================================
+        // 1. Firebase 設定區 (請填入你的資料)
+        // ==========================================
         const firebaseConfig = {
             apiKey: "AIzaSyBbp0kENACTRcVmV2PZW8Q2pHNtMdGhbZ0",
             authDomain: "smart-pillbox-23113.firebaseapp.com",
@@ -101,38 +246,81 @@
             appId: "1:228363023113:web:1522c20f1e29f2029499d8"
         };
 
-        // 1. 初始化 Firebase
-        const app = initializeApp(firebaseConfig);
-        const db = getDatabase(app);
+        // 初始化 Firebase
+        if (!firebase.apps.length) {
+            firebase.initializeApp(firebaseConfig);
+        }
+        const db = firebase.database();
 
-        // 2. 定義我們要控制的資料路徑
-        const commandRef = ref(db, 'command');
+        // ==========================================
+        // 2. 監聽 (Monitor) - 從 Firebase 讀取資料
+        // ==========================================
+        const monitorRef = db.ref('/pillbox/monitor');
 
-        // 3. 監聽狀態 (當資料庫變動時，網頁上的字也要跟著變)
-        onValue(commandRef, (snapshot) => {
+        monitorRef.on('value', (snapshot) => {
+            document.getElementById('loading').style.display = 'none';
             const data = snapshot.val();
-            const statusText = document.getElementById("statusText");
 
-            if (data === 1) {
-                statusText.innerText = "狀態：馬達轉動中 🔄";
-                statusText.style.color = "#ea4335"; // 紅色字
-            } else {
-                statusText.innerText = "狀態：待機中 ✅";
-                statusText.style.color = "#34a853"; // 綠色字
+            if (data) {
+                // A. 更新溫度
+                if (data.temp) {
+                    document.getElementById('temp-display').innerText = data.temp + " °C";
+                }
+
+                // B. 更新五點藥杯 (解析字串 "1,0,1,0,1")
+                if (data.cups) {
+                    const cupStates = data.cups.split(','); // 變成陣列 ['1', '0', ...]
+
+                    cupStates.forEach((state, index) => {
+                        const cupEl = document.getElementById('cup-' + index);
+                        if (state === '1') {
+                            cupEl.classList.add('active');
+                            cupEl.classList.remove('inactive');
+                        } else {
+                            cupEl.classList.add('inactive');
+                            cupEl.classList.remove('active');
+                        }
+                    });
+                }
+
+                // C. 更新單點霍爾
+                const hallEl = document.getElementById('hall-sensor');
+                if (data.hall_sensor === true) { // 注意：ESP32 傳上來的是 boolean
+                    hallEl.innerText = "🚨 單點霍爾：偵測到磁鐵！";
+                    hallEl.classList.add('hall-active');
+                    hallEl.classList.remove('hall-inactive');
+                } else {
+                    hallEl.innerText = "單點霍爾：無訊號";
+                    hallEl.classList.add('hall-inactive');
+                    hallEl.classList.remove('hall-active');
+                }
+
+                // 更新連線時間 (可選)
+                document.getElementById('connection-status').innerText = "已連線";
+                document.getElementById('connection-status').style.color = "green";
             }
         });
 
-        // 4. 按鈕功能：按下「出藥」
-        document.getElementById("btnFeed").addEventListener("click", () => {
-            set(commandRef, 1); // 把 command 改成 1
-        });
+        // ==========================================
+        // 3. 控制 (Control) - 寫入指令到 Firebase
+        // ==========================================
+        function sendCommand(cmd) {
+            console.log("發送指令:", cmd);
 
-        // 5. 按鈕功能：按下「停止」
-        document.getElementById("btnStop").addEventListener("click", () => {
-            set(commandRef, 0); // 把 command 改成 0
-        });
+            // 寫入 /pillbox/command 路徑
+            // ESP32 讀取後會自動執行並清除此欄位
+            db.ref('/pillbox/command').set(cmd)
+                .then(() => {
+                    // 這裡可以做一些按鈕回饋，例如震動或變色
+                    console.log("指令發送成功");
+                })
+                .catch((error) => {
+                    alert("指令發送失敗: " + error.message);
+                });
+        }
 
     </script>
+
 </body>
 
 </html>
