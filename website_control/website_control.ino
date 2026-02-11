@@ -1,0 +1,306 @@
+#include <Arduino.h>
+#include <WiFi.h>
+#include <Firebase_ESP_Client.h>
+#include <addons/TokenHelper.h>
+#include <addons/RTDBHelper.h>
+#include <AccelStepper.h>
+#include <DHT.h>
+#include <DFRobotDFPlayerMini.h>
+
+// ==========================================
+// 1. 網路與 Firebase 設定 (請修改這裡)
+// ==========================================
+#define WIFI_SSID "TP-Link_2.4G"
+#define WIFI_PASSWORD "0910142371"
+
+// 2. 填入 Firebase 資訊
+#define API_KEY "AIzaSyBbp0kENACTRcVmV2PZW8Q2pHNtMdGhbZ0"
+#define DATABASE_URL "smart-pillbox-23113-default-rtdb.firebaseio.com"
+
+
+
+// ==========================================
+// 2. 硬體腳位定義 (Pin Definitions)
+// ==========================================
+// --- 馬達 1: 旋轉圓盤 ---
+#define M1_PUL_PIN 13
+#define M1_DIR_PIN 14
+#define M1_ENABLE_PIN 21  // [關鍵] 啟用腳位
+#define SENSOR1_PIN 3     // 圓盤歸零 (ADC1)
+
+// --- 馬達 2: 推桿 ---
+#define M2_PUL_PIN 16
+#define M2_DIR_PIN 15
+#define SENSOR2_PIN 9  // 底部遮斷器 (ADC1)
+
+// --- 環境與特效 ---
+#define FAN_PIN 10        // [修正] 風扇
+#define DHT_PIN 11        // [修正] 溫濕度
+#define LED_STRIP_PIN 12  // 燈條
+#define DFPLAYER_TX 17
+#define DFPLAYER_RX 18
+
+// --- 感測器 ---
+#define PIN_5_POINT_SENSOR 4  // (ADC1) 五點分壓
+#define PIN_SINGLE_SENSOR 5   // (ADC1) 單點霍爾 (類比)
+
+// ==========================================
+// 3. 參數與全域變數
+// ==========================================
+// --- Firebase 物件 ---
+FirebaseData fbdo;
+FirebaseAuth auth;
+FirebaseConfig config;
+bool firebaseReady = false;
+
+// --- 上傳計時器 ---
+unsigned long lastTempUpdate = 0;
+const long TEMP_INTERVAL = 3000;  // 溫度每 3 秒更新
+unsigned long lastSensorUpdate = 0;
+const long SENSOR_INTERVAL = 200;  // 霍爾每 0.2 秒更新
+
+// --- 五點感測器參數 ---
+const float R_PULLUP = 4700.0;
+const float R_WEIGHTS[5] = { 33000.0, 15000.0, 8200.0, 3780.0, 1860.0 };
+bool cupState[5] = { false };
+
+// --- [新增] 指令過濾器 ---
+String lastCommandID = "";  // 用來記錄上一次執行過的指令 ID
+
+// --- 單點霍爾 (類比) ---
+// 需根據實測調整，通常磁鐵靠近時數值會劇烈變化 (變極小或極大)
+// 假設無磁鐵約 1800~2000，有磁鐵小於 1000
+const int HALL_THRESHOLD = 1500;
+bool movingCupState = false;
+
+// --- 馬達參數 ---
+const int MOVE_STEPS = 200;         // 每次移動步數
+const int SENSOR_THRESHOLD = 2400;  // 遮斷器門檻 (大於此值代表被遮擋)
+
+// --- 物件宣告 ---
+AccelStepper diskMotor(AccelStepper::DRIVER, M1_PUL_PIN, M1_DIR_PIN);
+AccelStepper pusherMotor(AccelStepper::DRIVER, M2_PUL_PIN, M2_DIR_PIN);
+DHT dht(DHT_PIN, DHT22);
+DFRobotDFPlayerMini myDFPlayer;
+#define FPSerial Serial1
+
+// ==========================================
+// 4. 自訂函式 (Functions)
+// ==========================================
+
+// --- 更新感測器狀態 ---
+void updateSensors() {
+  // A. 單點霍爾 (類比讀取)
+  int hallVal = analogRead(PIN_SINGLE_SENSOR);
+  // 如果讀數低於門檻，視為有磁鐵 (請依實際磁鐵極性與感測器型號調整判斷式)
+  if (hallVal < HALL_THRESHOLD) {
+    movingCupState = true;
+  } else {
+    movingCupState = false;
+  }
+
+  // B. 五點感測 (分壓解碼)
+  long sum = 0;
+  for (int i = 0; i < 10; i++) sum += analogRead(PIN_5_POINT_SENSOR);
+  int currentADC = sum / 10;
+
+  int bestMatch = 0;
+  float minDifference = 10000.0;
+  for (int i = 0; i < 32; i++) {
+    float totalConductance = 0;
+    for (int j = 0; j < 5; j++) {
+      if ((i >> j) & 1) totalConductance += (1.0 / R_WEIGHTS[j]);
+    }
+    float theoreticalADC = 4095.0 * (1.0 / (1.0 + R_PULLUP * totalConductance));
+    float diff = abs(currentADC - theoreticalADC);
+    if (diff < minDifference) {
+      minDifference = diff;
+      bestMatch = i;
+    }
+  }
+  for (int j = 0; j < 5; j++) cupState[j] = ((bestMatch >> j) & 1);
+}
+
+// --- 上傳狀態到 Firebase ---
+void uploadStatus() {
+  if (!firebaseReady || WiFi.status() != WL_CONNECTED) return;
+
+  FirebaseJson json;
+
+  // 1. 溫度
+  float t = dht.readTemperature();
+  if (!isnan(t)) json.set("temp", t);
+
+  // 2. 藥杯狀態
+  String cups = "";
+  for (int i = 0; i < 5; i++) {
+    cups += (cupState[i] ? "1" : "0");
+    if (i < 4) cups += ",";
+  }
+  json.set("cups", cups);
+
+  // 3. 單點霍爾
+  json.set("hall_sensor", movingCupState);
+
+  // [新增] 4. 寫入心跳時間戳記
+  // 使用 millis() 作為心跳證明，讓網頁知道 ESP32 還活著
+  json.set("last_seen", (unsigned long)millis());
+
+  // 寫入 Database
+  Firebase.RTDB.updateNode(&fbdo, "/pillbox/monitor", &json);
+}
+
+// ------------------------------------------------
+// 修改 2: executeCommand 改為「先清除、再執行」
+// ------------------------------------------------
+void executeCommand(String cmd) {
+  Serial.print("收到指令: ");
+  Serial.println(cmd);
+
+  // [關鍵修正] 一收到指令，立刻清除 Firebase 上的內容！
+  // 這樣避免 ESP32 做完動作回來又讀到同一條指令
+  Firebase.RTDB.setString(&fbdo, "/pillbox/command", "");
+
+  // --- 接著才開始做動作 (阻塞式) ---
+
+  if (cmd == "M1_CW") {
+    diskMotor.move(MOVE_STEPS);
+    while (diskMotor.distanceToGo() != 0) diskMotor.run();
+  } else if (cmd == "M1_CCW") {
+    diskMotor.move(-MOVE_STEPS);
+    while (diskMotor.distanceToGo() != 0) diskMotor.run();
+  } else if (cmd == "M2_UP") {
+    pusherMotor.move(-MOVE_STEPS);
+    while (pusherMotor.distanceToGo() != 0) pusherMotor.run();
+  } else if (cmd == "M2_DOWN") {
+    pusherMotor.move(MOVE_STEPS);
+    while (pusherMotor.distanceToGo() != 0) {
+      if (analogRead(SENSOR2_PIN) > SENSOR_THRESHOLD) {
+        pusherMotor.stop();
+        pusherMotor.setCurrentPosition(0);
+        break;
+      }
+      pusherMotor.run();
+    }
+  } else if (cmd == "FAN_ON") digitalWrite(FAN_PIN, HIGH);
+  else if (cmd == "FAN_OFF") digitalWrite(FAN_PIN, LOW);
+  else if (cmd == "LED_ON") digitalWrite(LED_STRIP_PIN, HIGH);
+  else if (cmd == "LED_OFF") digitalWrite(LED_STRIP_PIN, LOW);
+  else if (cmd == "PLAY_MUSIC") myDFPlayer.play(1);
+
+  // 這裡不需要再清除指令了，因為最上面已經清除了
+}
+
+// ==========================================
+// 5. Setup
+// ==========================================
+void setup() {
+  Serial.begin(115200);
+
+  // --- 硬體初始化 ---
+  pinMode(FAN_PIN, OUTPUT);
+  pinMode(LED_STRIP_PIN, OUTPUT);
+  pinMode(M1_ENABLE_PIN, OUTPUT);
+  digitalWrite(M1_ENABLE_PIN, LOW);  // 鎖定圓盤馬達
+
+  // 初始化感測器
+  pinMode(PIN_SINGLE_SENSOR, INPUT);  // 類比輸入不用 PULLUP
+  analogReadResolution(12);
+  analogSetPinAttenuation(PIN_5_POINT_SENSOR, ADC_ATTENDB_MAX);
+  analogSetPinAttenuation(PIN_SINGLE_SENSOR, ADC_ATTENDB_MAX);
+
+  dht.begin();
+
+  // --- 音樂初始化 ---
+  FPSerial.begin(9600, SERIAL_8N1, DFPLAYER_RX, DFPLAYER_TX);
+  if (myDFPlayer.begin(FPSerial)) {
+    myDFPlayer.volume(15);
+  }
+
+  // --- 馬達初始化 (降速以配合 2A 電源) ---
+  diskMotor.setMaxSpeed(500);
+  diskMotor.setAcceleration(100);
+  pusherMotor.setMaxSpeed(500);
+  pusherMotor.setAcceleration(100);
+
+  // --- 網路初始化 ---
+  WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
+  Serial.print("連線 WiFi");
+  while (WiFi.status() != WL_CONNECTED) {
+    Serial.print(".");
+    delay(500);
+  }
+  Serial.println(" 已連線");
+
+  // --- Firebase 初始化 ---
+  config.api_key = API_KEY;
+  config.database_url = DATABASE_URL;
+  Firebase.signUp(&config, &auth, "", "");
+  Firebase.begin(&config, &auth);
+  Firebase.reconnectWiFi(true);
+  firebaseReady = true;
+
+  // [新增] 開機時，先把雲端的指令清空，避免一上電就亂動
+  Firebase.RTDB.setString(&fbdo, "/pillbox/command", "");
+  Serial.println("✨ 系統就緒：已清除舊指令");
+}
+
+// ==========================================
+// 6. Loop
+// ==========================================
+void loop() {
+  unsigned long currentMillis = millis();
+
+  // ------------------------------------
+  // 任務 1: 感測器讀取與上傳
+  // ------------------------------------
+  // 每 0.2 秒讀取一次感測器 (本地更新)
+  if (currentMillis - lastSensorUpdate > SENSOR_INTERVAL) {
+    updateSensors();
+    lastSensorUpdate = currentMillis;
+  }
+
+  // 每 3 秒上傳一次狀態 (含溫度) 到 Firebase
+  if (currentMillis - lastTempUpdate > TEMP_INTERVAL) {
+    uploadStatus();  // 將目前所有數值推送到雲端
+    lastTempUpdate = currentMillis;
+  }
+
+  // ------------------------------------
+  // 任務 2: 檢查雲端指令 (身分證過濾版)
+  // ------------------------------------
+  if (firebaseReady && WiFi.status() == WL_CONNECTED) {
+    if (Firebase.RTDB.getString(&fbdo, "/pillbox/command")) {
+      String rawData = fbdo.stringData();
+
+      // 只有當指令不為空，且包含逗號 (代表有 ID) 時才處理
+      if (rawData != "" && rawData.indexOf(',') > 0) {
+
+        // 1. 拆解字串 (格式: "指令,ID")
+        int commaIndex = rawData.indexOf(',');
+        String cmd = rawData.substring(0, commaIndex);  // 取出逗號前面的 (例如 M1_CW)
+        String id = rawData.substring(commaIndex + 1);  // 取出逗號後面的 (例如 1707...)
+
+        // 2. [核心邏輯] 檢查這張身分證是否已經做過了？
+        if (id != lastCommandID) {
+
+          // 如果是新的 ID，才執行！
+          Serial.print("✅ 收到新指令 ID: ");
+          Serial.println(id);
+
+          executeCommand(cmd);  // 執行動作
+
+          // 3. 記住這張 ID，下次再看到它就忽略
+          lastCommandID = id;
+
+          // 4. 清除雲端指令 (保持好習慣，雖然有 ID 過濾其實不清也沒關係，但清掉比較乾淨)
+          Firebase.RTDB.setString(&fbdo, "/pillbox/command", "");
+
+        } else {
+          // 如果 ID 一樣，代表是重複讀取到的，直接忽略
+          // Serial.println("🛡️ 攔截到重複指令，略過...");
+        }
+      }
+    }
+  }
+}
