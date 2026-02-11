@@ -159,6 +159,17 @@
             margin-top: 10px;
         }
 
+        .btn-home {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            width: 100%;
+            margin-top: 10px;
+        }
+
+        .btn-home:hover {
+            background: linear-gradient(135deg, #5568d3 0%, #653a8b 100%);
+        }
+
         /* 讀取中遮罩 */
         #loading {
             text-align: center;
@@ -225,6 +236,9 @@
         </div>
 
         <button class="btn-music" onclick="sendCommand('PLAY_MUSIC')">🎵 播放測試音效</button>
+
+        <div style="margin-top: 20px; margin-bottom: 5px;">系統控制</div>
+        <button class="btn-home" onclick="sendCommand('HOME')">🏠 回歸原點</button>
 
     </div>
 

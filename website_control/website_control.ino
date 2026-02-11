@@ -168,6 +168,36 @@ void executeCommand(String cmd) {
       }
       pusherMotor.run();
     }
+  } else if (cmd == "HOME") {
+    Serial.println("開始回歸原點...");
+    
+    // 階段 1: 推桿下降至底部
+    Serial.println("  階段 1: 推桿下降");
+    pusherMotor.move(MOVE_STEPS);
+    while (pusherMotor.distanceToGo() != 0) {
+      if (analogRead(SENSOR2_PIN) > SENSOR_THRESHOLD) {
+        pusherMotor.stop();
+        pusherMotor.setCurrentPosition(0);
+        Serial.println("  ✓ 推桿已歸零");
+        break;
+      }
+      pusherMotor.run();
+    }
+    
+    // 階段 2: 圓盤逆時針旋轉至原點
+    Serial.println("  階段 2: 圓盤旋轉");
+    diskMotor.move(-2000);  // 設定足夠大的步數
+    while (diskMotor.distanceToGo() != 0) {
+      if (analogRead(SENSOR1_PIN) > SENSOR_THRESHOLD) {
+        diskMotor.stop();
+        diskMotor.setCurrentPosition(0);
+        Serial.println("  ✓ 圓盤已歸零");
+        break;
+      }
+      diskMotor.run();
+    }
+    
+    Serial.println("✅ 回歸原點完成");
   } else if (cmd == "FAN_ON") digitalWrite(FAN_PIN, HIGH);
   else if (cmd == "FAN_OFF") digitalWrite(FAN_PIN, LOW);
   else if (cmd == "LED_ON") digitalWrite(LED_STRIP_PIN, HIGH);
