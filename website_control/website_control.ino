@@ -8,25 +8,21 @@
 #include <DFRobotDFPlayerMini.h>
 
 // ==========================================
-// 1. 網路與 Firebase 設定 (請修改這裡)
+// 1. 網路與 Firebase 設定
 // ==========================================
 #define WIFI_SSID "TP-Link_2.4G"
 #define WIFI_PASSWORD "0910142371"
-
-// 2. 填入 Firebase 資訊
 #define API_KEY "AIzaSyBbp0kENACTRcVmV2PZW8Q2pHNtMdGhbZ0"
 #define DATABASE_URL "smart-pillbox-23113-default-rtdb.firebaseio.com"
 
-
-
 // ==========================================
-// 2. 硬體腳位定義 (Pin Definitions)
+// 2. 硬體腳位定義
 // ==========================================
 // --- 馬達 1: 旋轉圓盤 ---
 #define M1_PUL_PIN 13
 #define M1_DIR_PIN 14
-#define M1_ENABLE_PIN 21  // [關鍵] 啟用腳位
-#define SENSOR1_PIN 3     // 圓盤歸零 (ADC1)
+#define M1_ENABLE_PIN 21
+#define SENSOR1_PIN 3     // 圓盤歸零感測器 (未使用)
 
 // --- 馬達 2: 推桿 ---
 #define M2_PUL_PIN 16
@@ -34,9 +30,9 @@
 #define SENSOR2_PIN 9  // 底部遮斷器 (ADC1)
 
 // --- 環境與特效 ---
-#define FAN_PIN 10        // [修正] 風扇
-#define DHT_PIN 11        // [修正] 溫濕度
-#define LED_STRIP_PIN 12  // 燈條
+#define FAN_PIN 10
+#define DHT_PIN 11
+#define LED_STRIP_PIN 12
 #define DFPLAYER_TX 17
 #define DFPLAYER_RX 18
 
@@ -64,18 +60,16 @@ const float R_PULLUP = 4700.0;
 const float R_WEIGHTS[5] = { 33000.0, 15000.0, 8200.0, 3780.0, 1860.0 };
 bool cupState[5] = { false };
 
-// --- [新增] 指令過濾器 ---
-String lastCommandID = "";  // 用來記錄上一次執行過的指令 ID
+// --- 指令過濾器 ---
+String lastCommandID = "";
 
-// --- 單點霍爾 (類比) ---
-// 需根據實測調整，通常磁鐵靠近時數值會劇烈變化 (變極小或極大)
-// 假設無磁鐵約 1800~2000，有磁鐵小於 1000
-const int HALL_THRESHOLD = 1500;
+// --- 單點霍爾感測器 ---
+const int HALL_THRESHOLD = 1500;  // 根據實測調整
 bool movingCupState = false;
 
 // --- 馬達參數 ---
-const int MOVE_STEPS = 200;         // 每次移動步數
-const int SENSOR_THRESHOLD = 2400;  // 遮斷器門檻 (大於此值代表被遮擋)
+const int MOVE_STEPS = 200;
+const int SENSOR_THRESHOLD = 2400;  // 推桿底部遮斷器門檻
 
 // --- 物件宣告 ---
 AccelStepper diskMotor(AccelStepper::DRIVER, M1_PUL_PIN, M1_DIR_PIN);
@@ -142,24 +136,16 @@ void uploadStatus() {
   // 3. 單點霍爾
   json.set("hall_sensor", movingCupState);
 
-  // [新增] 4. 寫入心跳時間戳記
-  // 使用 millis() 作為心跳證明，讓網頁知道 ESP32 還活著
+  // 4. 心跳時間戳記
   json.set("last_seen", (unsigned long)millis());
 
   // 寫入 Database
   Firebase.RTDB.updateNode(&fbdo, "/pillbox/monitor", &json);
 }
 
-// ------------------------------------------------
-// 修改 2: executeCommand 改為「先清除、再執行」
-// ------------------------------------------------
 void executeCommand(String cmd) {
-  Serial.print("收到指令: ");
+  Serial.print("執行指令: ");
   Serial.println(cmd);
-
-  // [關鍵修正] 一收到指令，立刻清除 Firebase 上的內容！
-  // 這樣避免 ESP32 做完動作回來又讀到同一條指令
-  Firebase.RTDB.setString(&fbdo, "/pillbox/command", "");
 
   // --- 接著才開始做動作 (阻塞式) ---
 
@@ -187,8 +173,6 @@ void executeCommand(String cmd) {
   else if (cmd == "LED_ON") digitalWrite(LED_STRIP_PIN, HIGH);
   else if (cmd == "LED_OFF") digitalWrite(LED_STRIP_PIN, LOW);
   else if (cmd == "PLAY_MUSIC") myDFPlayer.play(1);
-
-  // 這裡不需要再清除指令了，因為最上面已經清除了
 }
 
 // ==========================================
@@ -240,22 +224,16 @@ void setup() {
   Firebase.reconnectWiFi(true);
   firebaseReady = true;
 
-  // [修正] 開機時的指令處理策略：
-  // 1. 先讀取當前指令（如果存在）
-  // 2. 記錄它的 ID（但不執行），這樣 loop() 會自動過濾
-  // 3. 清空雲端指令
-  // 4. 延遲確保操作完成
+  // 開機時讀取舊指令並記錄 ID（不執行），避免重複執行
   
   Serial.println("🔍 檢查雲端是否有舊指令...");
   if (Firebase.RTDB.getString(&fbdo, "/pillbox/command")) {
     String oldCommand = fbdo.stringData();
     
-    // 如果有舊指令且格式正確（包含逗號和 ID）
     if (oldCommand != "" && oldCommand.indexOf(',') > 0) {
       int commaIndex = oldCommand.indexOf(',');
       String oldID = oldCommand.substring(commaIndex + 1);
       
-      // 記錄這個 ID，讓 loop() 自動忽略它
       lastCommandID = oldID;
       Serial.print("⚠️  發現舊指令 ID: ");
       Serial.print(oldID);
@@ -263,7 +241,6 @@ void setup() {
     }
   }
   
-  // 清空雲端指令（即使非阻塞，ID 過濾機制也能保護）
   Firebase.RTDB.setString(&fbdo, "/pillbox/command", "");
   
   Serial.println("✨ 系統就緒：舊指令已過濾，準備接收新指令");
@@ -291,38 +268,27 @@ void loop() {
   }
 
   // ------------------------------------
-  // 任務 2: 檢查雲端指令 (身分證過濾版)
+  // 任務 2: 檢查雲端指令
   // ------------------------------------
   if (firebaseReady && WiFi.status() == WL_CONNECTED) {
     if (Firebase.RTDB.getString(&fbdo, "/pillbox/command")) {
       String rawData = fbdo.stringData();
 
-      // 只有當指令不為空，且包含逗號 (代表有 ID) 時才處理
       if (rawData != "" && rawData.indexOf(',') > 0) {
 
-        // 1. 拆解字串 (格式: "指令,ID")
         int commaIndex = rawData.indexOf(',');
-        String cmd = rawData.substring(0, commaIndex);  // 取出逗號前面的 (例如 M1_CW)
-        String id = rawData.substring(commaIndex + 1);  // 取出逗號後面的 (例如 1707...)
+        String cmd = rawData.substring(0, commaIndex);
+        String id = rawData.substring(commaIndex + 1);
 
-        // 2. [核心邏輯] 檢查這張身分證是否已經做過了？
         if (id != lastCommandID) {
-
-          // 如果是新的 ID，才執行！
           Serial.print("✅ 收到新指令 ID: ");
           Serial.println(id);
 
           executeCommand(cmd);  // 執行動作
 
-          // 3. 記住這張 ID，下次再看到它就忽略
           lastCommandID = id;
 
-          // 4. 清除雲端指令 (保持好習慣，雖然有 ID 過濾其實不清也沒關係，但清掉比較乾淨)
           Firebase.RTDB.setString(&fbdo, "/pillbox/command", "");
-
-        } else {
-          // 如果 ID 一樣，代表是重複讀取到的，直接忽略
-          // Serial.println("🛡️ 攔截到重複指令，略過...");
         }
       }
     }
