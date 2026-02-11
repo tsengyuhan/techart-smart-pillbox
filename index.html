@@ -314,7 +314,7 @@
         setInterval(() => {
             const now = Date.now();
             // 如果現在時間 - 上次收到時間 > 6000 毫秒 (6秒)
-            if (now - lastHeartbeatTime > 5000) {
+            if (now - lastHeartbeatTime > 6000) {
                 updateConnectionStatus(false);
             }
         }, 1000);
