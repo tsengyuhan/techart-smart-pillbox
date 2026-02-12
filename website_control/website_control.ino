@@ -330,7 +330,7 @@ void executeCommand(String cmd) {
     diskMotor.setCurrentPosition(0);
     Serial.println("　✓ 已回歸原點");
 
-    int pusherSteps = 4060;
+    int pusherSteps = 4100;
     
     // 步驟 2: 循環 6 個位置
     for (int i = 1; i <= DISPENSE_POSITIONS; i++) {
@@ -480,7 +480,7 @@ void executeCommand(String cmd) {
     
     // 步驟 1: 推桿回歸原點
     Serial.println("  → 推桿回歸原點");
-    pusherMotor.setSpeed(500);
+    pusherMotor.setSpeed(800);
     while (true) {
       if (analogRead(SENSOR2_PIN) > SENSOR_THRESHOLD) {
         pusherMotor.stop();
@@ -508,7 +508,7 @@ void executeCommand(String cmd) {
     
     // 步驟 3: 推桿推到最高處
     Serial.println("  → 推桿推到最高處");
-    pusherMotor.move(-4060);  // 使用 pusherSteps 數值
+    pusherMotor.move(-4100);  // 使用 pusherSteps 數值
     while (pusherMotor.distanceToGo() != 0) pusherMotor.run();
     
     Serial.println("✅ Demo A 完成");
@@ -519,7 +519,7 @@ void executeCommand(String cmd) {
     
     // 步驟 1: 推桿回歸原點
     Serial.println("  → 推桿回歸原點");
-    pusherMotor.setSpeed(500);
+    pusherMotor.setSpeed(800);
     while (true) {
       if (analogRead(SENSOR2_PIN) > SENSOR_THRESHOLD) {
         pusherMotor.stop();
@@ -547,13 +547,12 @@ void executeCommand(String cmd) {
     
     // 步驟 3: 推桿推到最高處
     Serial.println("  → 推桿推到最高處");
-    pusherMotor.move(-4060);  // 使用 pusherSteps 數值
+    pusherMotor.move(-4100);  // 使用 pusherSteps 數值
     while (pusherMotor.distanceToGo() != 0) pusherMotor.run();
     
     Serial.println("✅ Demo B 完成");
-  }
-}
- else if (cmd == "FAN_ON") digitalWrite(FAN_PIN, HIGH);
+    
+  } else if (cmd == "FAN_ON") digitalWrite(FAN_PIN, HIGH);
   else if (cmd == "FAN_OFF") digitalWrite(FAN_PIN, LOW);
   else if (cmd == "LED_ON") digitalWrite(LED_STRIP_PIN, HIGH);
   else if (cmd == "LED_OFF") digitalWrite(LED_STRIP_PIN, LOW);
@@ -565,6 +564,9 @@ void executeCommand(String cmd) {
 // ==========================================
 void setup() {
   Serial.begin(115200);
+
+   // 等待電源穩定（解決上電後 WiFi 連線失敗問題）
+  delay(2000);
 
   // --- 硬體初始化 ---
   pinMode(FAN_PIN, OUTPUT);
@@ -583,14 +585,17 @@ void setup() {
   // --- 音樂初始化 ---
   FPSerial.begin(9600, SERIAL_8N1, DFPLAYER_RX, DFPLAYER_TX);
   if (myDFPlayer.begin(FPSerial)) {
-    myDFPlayer.volume(5);
+    myDFPlayer.volume(15);
+    myDFPlayer.loop(false);  // 關閉循環播放
+    myDFPlayer.enableLoop();  // 啟用控制
+    delay(200);
   }
 
   // --- 馬達初始化 (降速以配合 2A 電源) ---
-  diskMotor.setMaxSpeed(1000);
-  diskMotor.setAcceleration(200);
-  pusherMotor.setMaxSpeed(1000);
-  pusherMotor.setAcceleration(200);
+  diskMotor.setMaxSpeed(1500);
+  diskMotor.setAcceleration(600);
+  pusherMotor.setMaxSpeed(1500);
+  pusherMotor.setAcceleration(600);
 
   // --- WiFi 網頁設定初始化 ---
   WiFiManager wifiManager;
