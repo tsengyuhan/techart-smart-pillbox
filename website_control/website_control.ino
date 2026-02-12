@@ -146,13 +146,13 @@ void updateSensors() {
   for (int j = 0; j < 5; j++) cupState[j] = ((bestMatch >> j) & 1);
   
   // 印出五點偵測數值
-  Serial.print("📊 五點感測 ADC: ");
+  /*Serial.print("📊 五點感測 ADC: ");
   Serial.print(currentADC);
   Serial.print(" | 藥杯狀態: ");
   for (int j = 0; j < 5; j++) {
     Serial.print(cupState[j] ? "🟢" : "⚪");
   }
-  Serial.println();
+  Serial.println();*/
 }
 
 // --- 上傳狀態到 Firebase ---
@@ -330,7 +330,7 @@ void executeCommand(String cmd) {
     diskMotor.setCurrentPosition(0);
     Serial.println("　✓ 已回歸原點");
 
-    int pusherSteps = 3800;
+    int pusherSteps = 4060;
     
     // 步驟 2: 循環 6 個位置
     for (int i = 1; i <= DISPENSE_POSITIONS; i++) {
@@ -473,7 +473,87 @@ void executeCommand(String cmd) {
     diskMotor.setCurrentPosition(0);
     
     Serial.println("✅ 出藥測試完成");
-  } else if (cmd == "FAN_ON") digitalWrite(FAN_PIN, HIGH);
+    
+  // --- Demo 模式 A: 反轉展示 ---
+  } else if (cmd == "DEMO_A") {
+    Serial.println("🎬 Demo 模式 A 開始...");
+    
+    // 步驟 1: 推桿回歸原點
+    Serial.println("  → 推桿回歸原點");
+    pusherMotor.setSpeed(500);
+    while (true) {
+      if (analogRead(SENSOR2_PIN) > SENSOR_THRESHOLD) {
+        pusherMotor.stop();
+        break;
+      }
+      pusherMotor.runSpeed();
+    }
+    pusherMotor.move(-100);
+    while (pusherMotor.distanceToGo() != 0) pusherMotor.run();
+    delay(100);
+    pusherMotor.setSpeed(100);
+    while (true) {
+      if (analogRead(SENSOR2_PIN) > SENSOR_THRESHOLD) {
+        pusherMotor.stop();
+        pusherMotor.setCurrentPosition(0);
+        break;
+      }
+      pusherMotor.runSpeed();
+    }
+    
+    // 步驟 2: 圓盤反向轉動一個位置
+    Serial.println("  → 圓盤反轉一格");
+    diskMotor.move(-STEPS_PER_POSITION);
+    while (diskMotor.distanceToGo() != 0) diskMotor.run();
+    
+    // 步驟 3: 推桿推到最高處
+    Serial.println("  → 推桿推到最高處");
+    pusherMotor.move(-4060);  // 使用 pusherSteps 數值
+    while (pusherMotor.distanceToGo() != 0) pusherMotor.run();
+    
+    Serial.println("✅ Demo A 完成");
+    
+  // --- Demo 模式 B: 正轉展示 ---
+  } else if (cmd == "DEMO_B") {
+    Serial.println("🎬 Demo 模式 B 開始...");
+    
+    // 步驟 1: 推桿回歸原點
+    Serial.println("  → 推桿回歸原點");
+    pusherMotor.setSpeed(500);
+    while (true) {
+      if (analogRead(SENSOR2_PIN) > SENSOR_THRESHOLD) {
+        pusherMotor.stop();
+        break;
+      }
+      pusherMotor.runSpeed();
+    }
+    pusherMotor.move(-100);
+    while (pusherMotor.distanceToGo() != 0) pusherMotor.run();
+    delay(100);
+    pusherMotor.setSpeed(100);
+    while (true) {
+      if (analogRead(SENSOR2_PIN) > SENSOR_THRESHOLD) {
+        pusherMotor.stop();
+        pusherMotor.setCurrentPosition(0);
+        break;
+      }
+      pusherMotor.runSpeed();
+    }
+    
+    // 步驟 2: 圓盤正向轉動一個位置
+    Serial.println("  → 圓盤正轉一格");
+    diskMotor.move(STEPS_PER_POSITION);
+    while (diskMotor.distanceToGo() != 0) diskMotor.run();
+    
+    // 步驟 3: 推桿推到最高處
+    Serial.println("  → 推桿推到最高處");
+    pusherMotor.move(-4060);  // 使用 pusherSteps 數值
+    while (pusherMotor.distanceToGo() != 0) pusherMotor.run();
+    
+    Serial.println("✅ Demo B 完成");
+  }
+}
+ else if (cmd == "FAN_ON") digitalWrite(FAN_PIN, HIGH);
   else if (cmd == "FAN_OFF") digitalWrite(FAN_PIN, LOW);
   else if (cmd == "LED_ON") digitalWrite(LED_STRIP_PIN, HIGH);
   else if (cmd == "LED_OFF") digitalWrite(LED_STRIP_PIN, LOW);
@@ -507,10 +587,10 @@ void setup() {
   }
 
   // --- 馬達初始化 (降速以配合 2A 電源) ---
-  diskMotor.setMaxSpeed(500);
-  diskMotor.setAcceleration(100);
-  pusherMotor.setMaxSpeed(500);
-  pusherMotor.setAcceleration(100);
+  diskMotor.setMaxSpeed(1000);
+  diskMotor.setAcceleration(200);
+  pusherMotor.setMaxSpeed(1000);
+  pusherMotor.setAcceleration(200);
 
   // --- WiFi 網頁設定初始化 ---
   WiFiManager wifiManager;
@@ -607,6 +687,34 @@ void loop() {
 
           Firebase.RTDB.setString(&fbdo, "/pillbox/command", "");
         }
+      }
+    }
+  }
+
+  // ------------------------------------
+  // 任務 3: 序列埠直接控制（校準模式）
+  // ------------------------------------
+  if (Serial.available() > 0) {
+    String input = Serial.readStringUntil('\n');
+    input.trim();
+    
+    if (input.length() > 0) {
+      int steps = input.toInt();
+      
+      if (steps != 0) {
+        Serial.print("🎯 移動推桿 ");
+        Serial.print(steps);
+        Serial.println(" 步...");
+        
+        pusherMotor.move(steps);
+        while (pusherMotor.distanceToGo() != 0) pusherMotor.run();
+        
+        Serial.print("📍 當前位置: ");
+        Serial.print(pusherMotor.currentPosition());
+        Serial.println(" 步 (負數=向上, 正數=向下)");
+      } else if (input == "0" || input.equalsIgnoreCase("reset")) {
+        pusherMotor.setCurrentPosition(0);
+        Serial.println("✅ 推桿位置已歸零");
       }
     }
   }

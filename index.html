@@ -76,6 +76,18 @@
         <button class="btn-home" onclick="sendCommand('HOME')">🏠 回歸原點</button>
         <button class="btn-test" onclick="sendCommand('TEST_DISPENSE')">🧪 出藥測試</button>
 
+        <div style="margin-top: 20px; margin-bottom: 5px; color: #9c27b0;">🎬 Demo 展示模式</div>
+        <div class="control-group">
+            <button class="btn-test" onclick="sendCommand('DEMO_A')"
+                style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">🎬 Demo A (反轉)</button>
+            <button class="btn-test" onclick="sendCommand('DEMO_B')"
+                style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);">🎬 Demo B (正轉)</button>
+        </div>
+        <p style="font-size: 0.75em; color: #999; margin-top: 5px;">
+            A: 推桿歸零 → 圓盤反轉一格 → 推桿推到最高<br>
+            B: 推桿歸零 → 圓盤正轉一格 → 推桿推到最高
+        </p>
+
         <div style="margin-top: 20px; margin-bottom: 5px; color: #ff6b6b;">⚙️ 推桿校準模式</div>
         <div class="control-group" style="grid-template-columns: 1fr 1fr 1fr;">
             <button class="btn-motor" onclick="sendCommand('M2_UP_STEP')">⬆️ 上 (50步)</button>
