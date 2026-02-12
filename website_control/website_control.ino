@@ -1,5 +1,6 @@
 #include <Arduino.h>
 #include <WiFi.h>
+#include <WiFiManager.h>  // WiFi 網頁設定庫
 #include <Firebase_ESP_Client.h>
 #include <addons/TokenHelper.h>
 #include <addons/RTDBHelper.h>
@@ -8,10 +9,8 @@
 #include <DFRobotDFPlayerMini.h>
 
 // ==========================================
-// 1. 網路與 Firebase 設定
+// 1. Firebase 設定（WiFi 改用 WiFiManager 網頁設定）
 // ==========================================
-#define WIFI_SSID "TP-Link_2.4G"
-#define WIFI_PASSWORD "0910142371"
 #define API_KEY "AIzaSyBbp0kENACTRcVmV2PZW8Q2pHNtMdGhbZ0"
 #define DATABASE_URL "smart-pillbox-23113-default-rtdb.firebaseio.com"
 
@@ -57,7 +56,7 @@ const long SENSOR_INTERVAL = 200;  // 霍爾每 0.2 秒更新
 
 // --- 五點感測器參數 ---
 const float R_PULLUP = 4700.0;
-const float R_WEIGHTS[5] = { 33000.0, 15000.0, 8200.0, 3780.0, 1860.0 };
+const float R_WEIGHTS[5] = { 33000.0, 15000.0, 8200.0, 3900.0, 2000.0 };
 bool cupState[5] = { false };
 
 // --- 指令過濾器 ---
@@ -68,7 +67,7 @@ const int HALL_THRESHOLD = 1500;  // 根據實測調整
 bool movingCupState = false;
 
 // --- 馬達參數 ---
-const int MOVE_STEPS = 30;
+const int MOVE_STEPS = 200;
 const int SENSOR_THRESHOLD = 2400;  // 推桿底部遮斷器門檻
 const int STEPS_PER_POSITION = 1067; // 每個位置間隔步數（60度，3200➗ 6）
 const int DISPENSE_POSITIONS = 6;   // 總共 6 個位置
@@ -88,17 +87,47 @@ DFRobotDFPlayerMini myDFPlayer;
 void updateSensors() {
   // A. 單點霍爾 (類比讀取)
   int hallVal = analogRead(PIN_SINGLE_SENSOR);
+  
   // 如果讀數低於門檻，視為有磁鐵 (請依實際磁鐵極性與感測器型號調整判斷式)
   if (hallVal < HALL_THRESHOLD) {
+    /*if (!movingCupState) {  // 狀態改變時才印出
+      Serial.print("🧲 霍爾感測器觸發！數值: ");
+      Serial.println(hallVal);
+    }*/
     movingCupState = true;
   } else {
+    /*if (movingCupState) {  // 狀態改變時才印出
+      Serial.print("⬜ 霍爾感測器無訊號。數值: ");
+      Serial.println(hallVal);
+    }*/
     movingCupState = false;
   }
 
-  // B. 五點感測 (分壓解碼)
-  long sum = 0;
-  for (int i = 0; i < 10; i++) sum += analogRead(PIN_5_POINT_SENSOR);
-  int currentADC = sum / 10;
+
+
+  // B. 五點感測 (分壓解碼) - 使用中位數濾波改善穩定性
+  const int SAMPLES = 50;  // 增加取樣次數
+  int adcReadings[SAMPLES];
+  
+  // 收集多次讀數
+  for (int i = 0; i < SAMPLES; i++) {
+    adcReadings[i] = analogRead(PIN_5_POINT_SENSOR);
+    delayMicroseconds(100);  // 微小延遲讓 ADC 穩定
+  }
+  
+  // 氣泡排序（找中位數）
+  for (int i = 0; i < SAMPLES - 1; i++) {
+    for (int j = 0; j < SAMPLES - i - 1; j++) {
+      if (adcReadings[j] > adcReadings[j + 1]) {
+        int temp = adcReadings[j];
+        adcReadings[j] = adcReadings[j + 1];
+        adcReadings[j + 1] = temp;
+      }
+    }
+  }
+  
+  // 取中位數（去除極端值）
+  int currentADC = adcReadings[SAMPLES / 2];
 
   int bestMatch = 0;
   float minDifference = 10000.0;
@@ -115,6 +144,15 @@ void updateSensors() {
     }
   }
   for (int j = 0; j < 5; j++) cupState[j] = ((bestMatch >> j) & 1);
+  
+  // 印出五點偵測數值
+  Serial.print("📊 五點感測 ADC: ");
+  Serial.print(currentADC);
+  Serial.print(" | 藥杯狀態: ");
+  for (int j = 0; j < 5; j++) {
+    Serial.print(cupState[j] ? "🟢" : "⚪");
+  }
+  Serial.println();
 }
 
 // --- 上傳狀態到 Firebase ---
@@ -291,6 +329,8 @@ void executeCommand(String cmd) {
     while (diskMotor.distanceToGo() != 0) diskMotor.run();
     diskMotor.setCurrentPosition(0);
     Serial.println("　✓ 已回歸原點");
+
+    int pusherSteps = 3800;
     
     // 步驟 2: 循環 6 個位置
     for (int i = 1; i <= DISPENSE_POSITIONS; i++) {
@@ -299,30 +339,64 @@ void executeCommand(String cmd) {
       Serial.print("/");
       Serial.println(DISPENSE_POSITIONS);
       
-      // 2.1 轉到下一個位置
-      diskMotor.move(STEPS_PER_POSITION);
-      while (diskMotor.distanceToGo() != 0) diskMotor.run();
+      // 2.1 轉到下一個位置（第一個位置除外，因為回歸原點就是第一個位置）
+      if (i > 1) {
+        diskMotor.move(STEPS_PER_POSITION);
+        while (diskMotor.distanceToGo() != 0) diskMotor.run();
+      }
       
-      // 2.2 推桿向上推（出藥動作）
+      // 2.2 推桿向上推（出藥動作）+ LED 漸亮 + 音效
       Serial.println("    → 推桿上升（出藥）");
-      pusherMotor.move(-2500);  // 負值 = 向上
-      while (pusherMotor.distanceToGo() != 0) pusherMotor.run();
+      pusherMotor.move(pusherSteps * -1);  // 負值 = 向上
       
-      // 停留 1 秒
+      int totalSteps = abs(pusherSteps);
+      int halfSteps = totalSteps / 2;
+      bool soundPlayed = false;
+      
+      // LED 從 0 漸亮到 255
+      while (pusherMotor.distanceToGo() != 0) {
+        int currentPos = abs(pusherMotor.currentPosition());
+        
+        // 計算 LED 亮度 (0-255)
+        int brightness = map(currentPos, 0, totalSteps, 0, 255);
+        brightness = constrain(brightness, 0, 255);
+        analogWrite(LED_STRIP_PIN, brightness);
+        
+        // 走到一半時播放第三個音檔
+        if (currentPos >= halfSteps && !soundPlayed) {
+          myDFPlayer.play(1);
+          soundPlayed = true;
+          Serial.println("      ♪ 播放音效");
+        }
+        
+        pusherMotor.run();
+      }
+      
+      // 停留 1 秒（保持 LED 全亮）
       delay(1000);
       
-      // 2.3 推桿回到原點
+      // 2.3 推桿回到原點 + LED 漸暗
       if (i == DISPENSE_POSITIONS) {
         // 最後一個位置：使用精確歸零
         Serial.println("    → 推桿精確歸零");
         
-        // 快速下降直到觸發感測器
+        // 快速下降直到觸發感測器 + LED 漸暗
         pusherMotor.setSpeed(500);
+        int startBrightness = 255;
+        unsigned long startTime = millis();
+        
         while (true) {
           if (analogRead(SENSOR2_PIN) > SENSOR_THRESHOLD) {
             pusherMotor.stop();
             break;
           }
+          
+          // LED 漸暗
+          unsigned long elapsed = millis() - startTime;
+          int brightness = map(elapsed, 0, 3000, 255, 0);  // 假設 3 秒內完成
+          brightness = constrain(brightness, 0, 255);
+          analogWrite(LED_STRIP_PIN, brightness);
+          
           pusherMotor.runSpeed();
         }
         
@@ -341,11 +415,31 @@ void executeCommand(String cmd) {
           }
           pusherMotor.runSpeed();
         }
+        
+        // 確保 LED 完全關閉
+        analogWrite(LED_STRIP_PIN, 0);
+        
       } else {
-        // 前 5 個位置：簡單下降回原點
+        // 前 5 個位置：簡單下降回原點 + LED 漸暗
         Serial.println("    → 推桿歸零");
-        pusherMotor.move(2500);  // 下降回原點
-        while (pusherMotor.distanceToGo() != 0) pusherMotor.run();
+        pusherMotor.move(pusherSteps);  // 下降回原點
+        
+        // LED 從 255 漸暗到 0（在下降一半時完全關閉）
+        while (pusherMotor.distanceToGo() != 0) {
+          // 使用剩餘步數計算亮度
+          int remaining = abs(pusherMotor.distanceToGo());
+          
+          // 在前半段（totalSteps -> totalSteps/2）時從 255 漸暗到 0
+          // 在後半段（< totalSteps/2）時保持 0
+          int brightness = map(remaining, totalSteps, totalSteps / 2, 255, 0);
+          brightness = constrain(brightness, 0, 255);
+          analogWrite(LED_STRIP_PIN, brightness);
+          
+          pusherMotor.run();
+        }
+        
+        // 確保 LED 完全關閉
+        analogWrite(LED_STRIP_PIN, 0);
       }
     }
     
@@ -409,7 +503,7 @@ void setup() {
   // --- 音樂初始化 ---
   FPSerial.begin(9600, SERIAL_8N1, DFPLAYER_RX, DFPLAYER_TX);
   if (myDFPlayer.begin(FPSerial)) {
-    myDFPlayer.volume(15);
+    myDFPlayer.volume(5);
   }
 
   // --- 馬達初始化 (降速以配合 2A 電源) ---
@@ -418,14 +512,26 @@ void setup() {
   pusherMotor.setMaxSpeed(500);
   pusherMotor.setAcceleration(100);
 
-  // --- 網路初始化 ---
-  WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
-  Serial.print("連線 WiFi");
-  while (WiFi.status() != WL_CONNECTED) {
-    Serial.print(".");
-    delay(500);
+  // --- WiFi 網頁設定初始化 ---
+  WiFiManager wifiManager;
+  
+  // 設定 AP 超時時間（3 分鐘無操作自動關閉）
+  wifiManager.setConfigPortalTimeout(180);
+  
+  // 嘗試連線，失敗則開啟設定頁面
+  Serial.println("🌐 嘗試連線 WiFi...");
+  Serial.println("如需設定 WiFi，請連線到熱點：SmartPillbox-Setup");
+  
+  if (!wifiManager.autoConnect("SmartPillbox-Setup")) {
+    Serial.println("❌ WiFi 連線逾時，重新啟動...");
+    delay(3000);
+    ESP.restart();
   }
-  Serial.println(" 已連線");
+  
+  Serial.println("✅ WiFi 已連線");
+  Serial.print("IP 位址: ");
+  Serial.println(WiFi.localIP());
+
 
   // --- Firebase 初始化 ---
   config.api_key = API_KEY;
