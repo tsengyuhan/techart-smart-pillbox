@@ -7,6 +7,8 @@
 #include <AccelStepper.h>
 #include <DHT.h>
 #include <DFRobotDFPlayerMini.h>
+#include "time.h"  // NTP Time Sync
+
 
 // ==========================================
 // 1. Firebase 設定（WiFi 改用 WiFiManager 網頁設定）
@@ -38,6 +40,7 @@
 // --- 感測器 ---
 #define PIN_5_POINT_SENSOR 4  // (ADC1) 五點分壓
 #define PIN_SINGLE_SENSOR 5   // (ADC1) 單點霍爾 (類比)
+#define PIN_CAP_SENSOR 8      // [NEW] 電容感應補藥開關
 
 // ==========================================
 // 3. 參數與全域變數
@@ -66,11 +69,37 @@ String lastCommandID = "";
 const int HALL_THRESHOLD = 1500;  // 根據實測調整
 bool movingCupState = false;
 
+// --- 設定參數 ---
+const char* ntpServer = "pool.ntp.org";
+const long  gmtOffset_sec = 28800;  // UTC+8
+const int   daylightOffset_sec = 0;
+
+// --- 鬧鐘結構 ---
+struct Alarm {
+  int hour;
+  int minute;
+  bool enabled;
+};
+Alarm alarms[5]; // 最多 5 組鬧鐘
+
+// --- 逾時設定 ---
+const unsigned long TIMEOUT_REMINDER = 120000; // 2 分鐘
+const unsigned long TIMEOUT_RETRACT = 180000;  // 3 分鐘
+const unsigned long DELAY_AFTER_TAKE = 15000;  // 15 秒
+
+// --- 系統狀態 ---
+bool isRefillMode = false;
+bool isDispensing = false;
+unsigned long dispenseStartTime = 0;
+bool cupTaken = false;
+int targetCups = 0; // 目標藥杯數量
+
 // --- 馬達參數 ---
 const int MOVE_STEPS = 200;
 const int SENSOR_THRESHOLD = 2400;  // 推桿底部遮斷器門檻
-const int STEPS_PER_POSITION = 1067; // 每個位置間隔步數（60度，3200➗ 6）
-const int DISPENSE_POSITIONS = 6;   // 總共 6 個位置
+const int STEPS_PER_POSITION = 1067; // 每個位置間隔步數
+const int DISPENSE_POSITIONS = 6;
+const int PUSHER_MAX_STEPS = 4100; // 推桿最大行程 (用於封孔/出藥)
 
 // --- 物件宣告 ---
 AccelStepper diskMotor(AccelStepper::DRIVER, M1_PUL_PIN, M1_DIR_PIN);
@@ -82,6 +111,96 @@ DFRobotDFPlayerMini myDFPlayer;
 // ==========================================
 // 4. 自訂函式 (Functions)
 // ==========================================
+
+// --- 馬達基礎動作 ---
+
+// 1. 推桿歸零 (回到最底部)
+void homePusher() {
+  Serial.println("⚙️ 推桿歸零中...");
+  pusherMotor.setSpeed(600);
+  // 快速下降
+  while (analogRead(SENSOR2_PIN) <= SENSOR_THRESHOLD) {
+     pusherMotor.move(100); // 向下
+     pusherMotor.runSpeed();
+  }
+  pusherMotor.stop();
+  
+  // 後退並精確歸零
+  pusherMotor.move(-100);
+  while (pusherMotor.distanceToGo() != 0) pusherMotor.run();
+  
+  pusherMotor.setSpeed(100);
+  while (analogRead(SENSOR2_PIN) <= SENSOR_THRESHOLD) {
+     pusherMotor.move(5);
+     pusherMotor.runSpeed();
+  }
+  pusherMotor.stop();
+  pusherMotor.setCurrentPosition(0);
+  Serial.println("✅ 推桿已歸零");
+}
+
+// 2. 圓盤歸零 (回到 Sensor 1 位置)
+void homeDisk() {
+  Serial.println("⚙️ 圓盤歸零中...");
+  diskMotor.setSpeed(600);
+  while (analogRead(SENSOR1_PIN) <= SENSOR_THRESHOLD) {
+     diskMotor.move(100);
+     diskMotor.runSpeed();
+  }
+  diskMotor.stop();
+  
+  // 精確調整
+  diskMotor.move(-100);
+  while (diskMotor.distanceToGo() != 0) diskMotor.run();
+  
+  diskMotor.setSpeed(100);
+  while (analogRead(SENSOR1_PIN) <= SENSOR_THRESHOLD) {
+     diskMotor.move(5);
+     diskMotor.runSpeed();
+  }
+  diskMotor.stop();
+  
+  // 回到真正的 0 點 (視安裝角度微調，假設 Sensor 觸發點即原點)
+  diskMotor.setCurrentPosition(0);
+  Serial.println("✅ 圓盤已歸零");
+}
+
+// 3. 封孔 (推桿上升到頂，平常待機狀態)
+void sealHole() {
+  Serial.println("🔒 執行封孔...");
+  // 必須先確認在原點，或假設當前為歸零狀態
+  if (pusherMotor.currentPosition() > -100) { // 簡單防呆
+      homePusher();
+  }
+  pusherMotor.moveTo(-PUSHER_MAX_STEPS); // 向上
+  while (pusherMotor.distanceToGo() != 0) pusherMotor.run();
+  Serial.println("✅ 已封孔 (待機)");
+}
+
+// 4. 開孔 (推桿下降到底，準備出藥)
+void unsealHole() {
+  Serial.println("🔓 執行開孔...");
+  homePusher(); // 直接執行歸零即可
+}
+
+// 5. 補藥模式 (全機歸零)
+void enterRefillMode() {
+  if (!isRefillMode) {
+    Serial.println("♻️ 進入補藥模式 - 全機歸零");
+    isRefillMode = true;
+    homePusher();
+    homeDisk();
+    // 停在這裡等待使用者操作完成
+  }
+}
+
+void exitRefillMode() {
+  if (isRefillMode) {
+    Serial.println("▶️ 退出補藥模式 - 恢復待機");
+    isRefillMode = false;
+    sealHole(); // 恢復封孔
+  }
+}
 
 // --- 更新感測器狀態 ---
 void updateSensors() {
@@ -145,6 +264,19 @@ void updateSensors() {
   }
   for (int j = 0; j < 5; j++) cupState[j] = ((bestMatch >> j) & 1);
   
+  // 計算蓋子上目前的藥杯數量
+  int detectedCount = 0;
+  for (int j = 0; j < 5; j++) {
+      if (cupState[j]) detectedCount++;
+  }
+  
+  // 比較目標
+  // 若目標為 0，通常代表沒設定，可視為忽略
+  bool isMatch = (targetCups > 0 && detectedCount == targetCups);
+  
+  // 除錯用
+  // Serial.printf("蓋子偵測: %d 杯 (目標: %d) -> %s\n", detectedCount, targetCups, isMatch ? "符合" : "不符");
+  
   // 印出五點偵測數值
   /*Serial.print("📊 五點感測 ADC: ");
   Serial.print(currentADC);
@@ -179,8 +311,165 @@ void uploadStatus() {
   // 4. 心跳時間戳記
   json.set("last_seen", (unsigned long)millis());
 
-  // 寫入 Database
+  // 5. 蓋子偵測資訊
+  // 計算目前數量
+  int count = 0;
+  for (int i=0; i<5; i++) if(cupState[i]) count++;
+  
+  json.set("lid/count", count);
+  json.set("lid/target", targetCups);
+  json.set("lid/is_match", (count == targetCups));
+  
+  // 6. 補藥模式狀態
+  json.set("refill_mode", isRefillMode);
+
+  // 寫入 Database到 monitor 節點
   Firebase.RTDB.updateNode(&fbdo, "/pillbox/monitor", &json);
+}
+
+// --- 解析 Firebase 鬧鐘設定 ---
+// 預期格式: 字串 "08:00,12:30,18:00" (以逗號分隔)
+void updateAlarmsFromFirebase() {
+  // 1. 讀取鬧鐘字串
+  if (Firebase.RTDB.getString(&fbdo, "/pillbox/config/alarms_str")) {
+     String raw = fbdo.stringData();
+     Serial.print("⏰ 更新鬧鐘設定: ");
+     Serial.println(raw);
+     
+     // 清空舊設定
+     for(int i=0; i<5; i++) alarms[i].enabled = false;
+     
+     int alarmIdx = 0;
+     int strIdx = 0;
+     while (alarmIdx < 5 && strIdx < raw.length()) {
+         int comma = raw.indexOf(',', strIdx);
+         if (comma == -1) comma = raw.length();
+         
+         String timeStr = raw.substring(strIdx, comma);
+         timeStr.trim();
+         
+         // 解析 HH:MM
+         int colon = timeStr.indexOf(':');
+         if (colon > 0) {
+             int h = timeStr.substring(0, colon).toInt();
+             int m = timeStr.substring(colon+1).toInt();
+             alarms[alarmIdx].hour = h;
+             alarms[alarmIdx].minute = m;
+             alarms[alarmIdx].enabled = true;
+             alarmIdx++;
+         }
+         
+         strIdx = comma + 1;
+     }
+  }
+  
+  // 2. 讀取目標藥杯數
+  if (Firebase.RTDB.getInt(&fbdo, "/pillbox/config/target_cups")) {
+      targetCups = fbdo.intData();
+      // Serial.print("🎯 更新目標藥杯數: ");
+      // Serial.println(targetCups);
+  }
+}
+
+// --- 出藥流程 (核心邏輯) ---
+void startDispenseSequence(int cupIndex) {
+  if (isDispensing) return;
+  isDispensing = true;
+  
+  Serial.println("💊 開始定時出藥流程");
+  
+  // 1. 開孔 (推桿下降)
+  unsealHole();
+  
+  // 2. 轉到指定藥杯位置
+  // 假設 cupIndex 1-5，轉動步數需計算
+  // 歸零後是 Position 0 (圓片)，Position 1 是第一個藥杯
+  int stepsToMove = cupIndex * STEPS_PER_POSITION; 
+  Serial.print("  → 轉動到藥杯 ");
+  Serial.println(cupIndex);
+  diskMotor.move(stepsToMove); 
+  while (diskMotor.distanceToGo() != 0) diskMotor.run();
+  
+  // 3. 推桿上升 (出藥)
+  Serial.println("  → 推桿上升 (出藥)");
+  pusherMotor.moveTo(-PUSHER_MAX_STEPS);
+  while (pusherMotor.distanceToGo() != 0) pusherMotor.run();
+  
+  // 4. 播放提示音
+  myDFPlayer.play(1);
+  
+  // 5. 監控取藥 (進入等待迴圈)
+  unsigned long waitStart = millis();
+  bool reminderPlayed = false;
+  bool cupRemoved = false;
+  
+  while (true) {
+    unsigned long elapsed = millis() - waitStart;
+    
+    // 檢查霍爾感測器 (有無藥杯)
+    // 注意：原本邏輯是 "低於門檻 = 有磁鐵"
+    int hallVal = analogRead(PIN_SINGLE_SENSOR);
+    bool hasCup = (hallVal < HALL_THRESHOLD);
+    
+    // 狀態 A: 藥杯被拿走
+    if (!hasCup) {
+      Serial.println("✨ 偵測到藥杯取走！等待 15 秒...");
+      delay(DELAY_AFTER_TAKE); // 等待 15 秒確認
+      cupRemoved = true;
+      break; 
+    }
+    
+    // 狀態 B: 超時 2 分鐘 -> 播放提醒
+    if (elapsed > TIMEOUT_REMINDER && !reminderPlayed) {
+      Serial.println("🔔 超時 2 分鐘 - 播放提醒音");
+      myDFPlayer.play(2); // 假設音軌 2 是提醒
+      reminderPlayed = true;
+    }
+    
+    // 狀態 C: 超時 3 分鐘 -> 縮回
+    if (elapsed > TIMEOUT_RETRACT) {
+      Serial.println("⚠️ 超時 3 分鐘 - 自動回收");
+      break; // 退出迴圈，執行回收
+    }
+    
+    delay(100); // 避免過度佔用
+  }
+  
+  // 6. 結束流程 (回收推桿 -> 圓盤歸零 -> 封孔)
+  Serial.println("  → 流程結束 - 系統復歸");
+  homePusher();
+  homeDisk();
+  sealHole();
+  
+  isDispensing = false;
+}
+
+// --- 檢查鬧鐘 ---
+void checkAlarms() {
+  if (isRefillMode || isDispensing) return;
+  
+  struct tm timeinfo;
+  if(!getLocalTime(&timeinfo)){
+    // Serial.println("無法取得時間");
+    return;
+  }
+
+  // 檢查每一組鬧鐘
+  for (int i = 0; i < 5; i++) {
+    if (alarms[i].enabled) {
+      if (timeinfo.tm_hour == alarms[i].hour && timeinfo.tm_min == alarms[i].minute && timeinfo.tm_sec == 0) {
+        Serial.print("⏰ 鬧鐘觸發: ");
+        Serial.println(i);
+        
+        // 簡單邏輯：每次鬧鐘觸發，出「下一個」有藥的杯子
+        // 這裡需要一個變數記錄 "Next Cup Index" 或是即時掃描哪裡有藥
+        // 暫時預設：總是出第 1 杯 (需再優化選擇邏輯)
+        startDispenseSequence(1); 
+        
+        delay(1000); // 避免 1 秒內重複觸發
+      }
+    }
+  }
 }
 
 void executeCommand(String cmd) {
@@ -209,73 +498,10 @@ void executeCommand(String cmd) {
       pusherMotor.run();
     }
   } else if (cmd == "HOME") {
-    Serial.println("開始回歸原點...");
-    
-    // ===== 階段 1: 推桿下降至底部 =====
-    Serial.println("  階段 1: 推桿下降");
-    
-    // 步驟 1.1: 快速下降直到觸發感測器
-    pusherMotor.setSpeed(500);
-    while (true) {
-      if (analogRead(SENSOR2_PIN) > SENSOR_THRESHOLD) {
-        pusherMotor.stop();
-        break;
-      }
-      pusherMotor.runSpeed();
-    }
-    
-    // 步驟 1.2: 後退一點點（離開觸發區）
-    pusherMotor.move(-100);
-    while (pusherMotor.distanceToGo() != 0) pusherMotor.run();
-    delay(100);
-    
-    // 步驟 1.3: 慢速精確歸零
-    pusherMotor.setSpeed(100);  // 慢速
-    while (true) {
-      if (analogRead(SENSOR2_PIN) > SENSOR_THRESHOLD) {
-        pusherMotor.stop();
-        pusherMotor.setCurrentPosition(0);
-        Serial.println("  ✓ 推桿已精確歸零");
-        break;
-      }
-      pusherMotor.runSpeed();
-    }
-    
-    // ===== 階段 2: 圓盤順時針旋轉至原點 =====
-    Serial.println("  階段 2: 圓盤旋轉");
-    
-    // 步驟 2.1: 快速旋轉直到觸發感測器
-    diskMotor.setSpeed(500);
-    while (true) {
-      if (analogRead(SENSOR1_PIN) > SENSOR_THRESHOLD) {
-        diskMotor.stop();
-        break;
-      }
-      diskMotor.runSpeed();
-    }
-    
-    // 步驟 2.2: 後退一點點（離開觸發區）
-    diskMotor.move(-100);
-    while (diskMotor.distanceToGo() != 0) diskMotor.run();
-    delay(100);
-    
-    // 步驟 2.3: 慢速精確歸零
-    diskMotor.setSpeed(100);  // 慢速
-    while (true) {
-      if (analogRead(SENSOR1_PIN) > SENSOR_THRESHOLD) {
-        diskMotor.stop();
-        Serial.println("  ✓ 圓盤觸發感測器");
-        break;
-      }
-      diskMotor.runSpeed();
-    }
-    
-    // 步驟 2.4: 後退到真正原點
-    diskMotor.move(-30);
-    while (diskMotor.distanceToGo() != 0) diskMotor.run();
-    diskMotor.setCurrentPosition(0);
-    Serial.println("  ✓ 圓盤已精確歸零");
-    
+    Serial.println("🏠 執行一鍵歸零 (含封孔)");
+    homePusher();
+    homeDisk();
+    sealHole();
     Serial.println("✅ 回歸原點完成");
   } else if (cmd == "TEST_DISPENSE") {
     Serial.println("🧪 開始出藥測試...");
@@ -596,6 +822,9 @@ void setup() {
   diskMotor.setAcceleration(600);
   pusherMotor.setMaxSpeed(1500);
   pusherMotor.setAcceleration(600);
+  
+  // --- 補藥開關 ---
+  pinMode(PIN_CAP_SENSOR, INPUT);
 
   // --- WiFi 網頁設定初始化 ---
   WiFiManager wifiManager;
@@ -617,10 +846,30 @@ void setup() {
   Serial.print("IP 位址: ");
   Serial.println(WiFi.localIP());
 
+  // --- NTP 對時 ---
+  Serial.println("🌐 同步時間中...");
+  configTime(gmtOffset_sec, daylightOffset_sec, ntpServer);
+  struct tm timeinfo;
+  if (getLocalTime(&timeinfo)) {
+    Serial.println("✅ 時間同步成功");
+    Serial.println(&timeinfo, "%A, %B %d %Y %H:%M:%S");
+  } else {
+    Serial.println("❌ 時間同步失敗");
+  }
+
+  // --- 開機自動歸零與封孔 ---
+  Serial.println("🚀 執行開機自動程序...");
+  homePusher();
+  homeDisk();
+  sealHole();
 
   // --- Firebase 初始化 ---
   config.api_key = API_KEY;
   config.database_url = DATABASE_URL;
+  
+  // 增加 buffer size 避免資料過長錯誤
+  fbdo.setResponseSize(4096);
+  
   Firebase.signUp(&config, &auth, "", "");
   Firebase.begin(&config, &auth);
   Firebase.reconnectWiFi(true);
@@ -667,7 +916,30 @@ void loop() {
   if (currentMillis - lastTempUpdate > TEMP_INTERVAL) {
     uploadStatus();  // 將目前所有數值推送到雲端
     lastTempUpdate = currentMillis;
+    
+    // 順便檢查鬧鐘設定更新 (每 3 秒檢查一次，或可獨立計時)
+    updateAlarmsFromFirebase();
   }
+  
+  // ------------------------------------
+  // 任務 1.5: 檢查補藥模式 (Pin 8)
+  // ------------------------------------
+  // 假設高電位觸發 (視硬體而定，若為觸摸模組通常是 High)
+  if (digitalRead(PIN_CAP_SENSOR) == HIGH) {
+    if (!isRefillMode) {
+       enterRefillMode();
+       delay(1000); // 防彈跳
+    } else {
+       // 如果已經是 Refill Mode，再次觸摸則退出
+       exitRefillMode();
+       delay(1000);
+    }
+  }
+
+  // ------------------------------------
+  // 任務 1.6: 檢查鬧鐘
+  // ------------------------------------
+  checkAlarms();
 
   // ------------------------------------
   // 任務 2: 檢查雲端指令

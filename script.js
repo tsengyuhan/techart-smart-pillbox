@@ -60,10 +60,86 @@ monitorRef.on('value', (snapshot) => {
         } else {
             hallEl.innerText = "單點霍爾：無訊號";
             hallEl.classList.add('hall-inactive');
+            hallEl.classList.add('hall-inactive');
             hallEl.classList.remove('hall-active');
+        }
+
+        // 更新蓋子藥杯資訊
+        if (data.lid) {
+            document.getElementById('lid-count').innerText = (data.lid.count !== undefined) ? data.lid.count : "--";
+            document.getElementById('lid-target').innerText = (data.lid.target !== undefined) ? data.lid.target : "--";
+
+            const msgEl = document.getElementById('lid-match-msg');
+            if (data.lid.is_match) {
+                msgEl.innerText = "✅ 數量符合";
+                msgEl.style.color = "green";
+            } else {
+                msgEl.innerText = "⚠️ 數量不符";
+                msgEl.style.color = "orange";
+            }
+        }
+
+        // 更新補藥模式狀態
+        const refillBanner = document.getElementById('refill-status');
+        if (data.refill_mode === true) {
+            refillBanner.style.display = 'block';
+        } else {
+            refillBanner.style.display = 'none';
         }
     }
 });
+
+// 載入設定
+function loadSettings() {
+    // 載入鬧鐘
+    db.ref('/pillbox/config/alarms_str').once('value').then((snapshot) => {
+        const raw = snapshot.val();
+        if (raw) {
+            const times = raw.split(',');
+            times.forEach((time, index) => {
+                const el = document.getElementById('alarm-' + index);
+                if (el) el.value = time.trim();
+            });
+        }
+    });
+
+    // 載入目標數量
+    db.ref('/pillbox/config/target_cups').once('value').then((snapshot) => {
+        const val = snapshot.val();
+        if (val !== null) {
+            document.getElementById('target-cups-input').value = val;
+        }
+    });
+}
+// 頁面載入時執行
+loadSettings();
+
+// 儲存設定
+function saveSettings() {
+    // 1. 儲存鬧鐘
+    const times = [];
+    for (let i = 0; i < 5; i++) {
+        const val = document.getElementById('alarm-' + i).value;
+        if (val) times.push(val);
+    }
+    const alarmsStr = times.join(',');
+
+    // 2. 儲存目標數量
+    const targetCups = parseInt(document.getElementById('target-cups-input').value) || 0;
+
+    // 寫入 Firebase
+    const updates = {};
+    updates['/pillbox/config/alarms_str'] = alarmsStr;
+    updates['/pillbox/config/target_cups'] = targetCups;
+
+    db.ref().update(updates)
+        .then(() => {
+            alert('✅ 設定已儲存！');
+        })
+        .catch((error) => {
+            alert('❌ 儲存失敗: ' + error.message);
+        });
+}
 
 // 斷線偵測（每秒檢查，超過 6 秒無心跳即判定斷線）
 setInterval(() => {

@@ -175,3 +175,57 @@ button:active {
     color: #666;
     font-style: italic;
 }
+
+/* 補藥模式 Banner */
+.refill-banner {
+    background-color: #ff9800;
+    color: white;
+    text-align: center;
+    padding: 15px;
+    font-weight: bold;
+    border-radius: 8px;
+    margin-bottom: 20px;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+    animation: blink 2s infinite;
+}
+
+@keyframes blink {
+    0% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: 0.8;
+    }
+
+    100% {
+        opacity: 1;
+    }
+}
+
+/* 鬧鐘輸入區 */
+.alarm-inputs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+    margin-top: 5px;
+}
+
+.alarm-inputs input {
+    padding: 8px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    font-size: 14px;
+}
+
+/* 儲存按鈕 */
+.btn-save {
+    background-color: #00796b;
+    color: white;
+    width: 100%;
+    margin-top: 15px;
+}
+
+.btn-save:hover {
+    background-color: #004d40;
+}

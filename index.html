@@ -18,6 +18,12 @@
 
     <div class="container">
         <h1>💊 藥盒控制中心</h1>
+
+        <!-- 補藥模式提示 (預設隱藏) -->
+        <div id="refill-status" class="refill-banner" style="display: none;">
+            ⚠️ 補藥模式開啟中 (馬達已歸零)
+        </div>
+
         <p id="loading">連線資料庫中...</p>
 
         <h2>即時監控 (Monitor)</h2>
@@ -33,13 +39,28 @@
             </div>
         </div>
 
-        <div style="text-align: center; color: #555;">五點藥杯偵測</div>
+        <div style="text-align: center; color: #555;">內部圓盤藥杯狀態</div>
         <div class="cups-container">
             <div id="cup-0" class="cup-indicator">1</div>
             <div id="cup-1" class="cup-indicator">2</div>
             <div id="cup-2" class="cup-indicator">3</div>
             <div id="cup-3" class="cup-indicator">4</div>
             <div id="cup-4" class="cup-indicator">5</div>
+        </div>
+
+        <div style="margin-top: 15px; padding: 10px; background: #fff3e0; border-radius: 8px;">
+            <div style="text-align: center; font-weight: bold; color: #e65100;">蓋子藥杯監控</div>
+            <div style="display: flex; justify-content: space-around; margin-top: 10px;">
+                <div style="text-align: center;">
+                    <div style="font-size: 0.8em; color: #888;">目前數量</div>
+                    <div id="lid-count" style="font-size: 1.5em; font-weight: bold;">--</div>
+                </div>
+                <div style="text-align: center;">
+                    <div style="font-size: 0.8em; color: #888;">目標設定</div>
+                    <div id="lid-target" style="font-size: 1.5em; font-weight: bold;">--</div>
+                </div>
+            </div>
+            <div id="lid-match-msg" style="text-align: center; margin-top: 5px; font-weight: bold;">--</div>
         </div>
 
         <div id="hall-sensor" class="hall-status hall-inactive">
@@ -75,6 +96,27 @@
         <div style="margin-top: 20px; margin-bottom: 5px;">系統控制</div>
         <button class="btn-home" onclick="sendCommand('HOME')">🏠 回歸原點</button>
         <button class="btn-test" onclick="sendCommand('TEST_DISPENSE')">🧪 出藥測試</button>
+
+        <div style="margin-top: 20px; margin-bottom: 5px; color: #00796b;">⏰ 設定</div>
+        <div class="control-group" style="display: block;">
+            <div style="margin-bottom: 10px;">
+                <label>每日定時 (最多5組):</label>
+                <div class="alarm-inputs">
+                    <input type="time" id="alarm-0">
+                    <input type="time" id="alarm-1">
+                    <input type="time" id="alarm-2">
+                    <input type="time" id="alarm-3">
+                    <input type="time" id="alarm-4">
+                </div>
+            </div>
+
+            <div style="margin-bottom: 10px;">
+                <label>預計藥杯數 (目標):</label>
+                <input type="number" id="target-cups-input" min="0" max="5" style="width: 50px; padding: 5px;">
+            </div>
+
+            <button class="btn-save" onclick="saveSettings()">💾 儲存設定</button>
+        </div>
 
         <div style="margin-top: 20px; margin-bottom: 5px; color: #9c27b0;">🎬 Demo 展示模式</div>
         <div class="control-group">
