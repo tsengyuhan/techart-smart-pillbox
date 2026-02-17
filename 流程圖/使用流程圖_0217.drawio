@@ -1,0 +1,361 @@
+<mxfile host="app.diagrams.net" agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36" version="29.4.0" pages="2">
+  <diagram name="第 1 页" id="_dT4-WnvLkvvNJYr6uqo">
+    <mxGraphModel dx="781" dy="575" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1169" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="hHGaCTHHTJgc5KuL15BD-1" parent="1" style="ellipse;whiteSpace=wrap;html=1;fillColor=#7B68EE;fontColor=#ffffff;strokeColor=#6656CC;fontSize=13;fontStyle=1;" value="🔌 開機" vertex="1">
+          <mxGeometry height="50" width="160" x="299.86" y="160" as="geometry" />
+        </mxCell>
+        <mxCell id="hHGaCTHHTJgc5KuL15BD-2" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#1e2a3a;fontColor=#8ab4f8;strokeColor=#4f9cf9;fontSize=11;" value="Wi-Fi 連線 + NTP 時間同步" vertex="1">
+          <mxGeometry height="50" width="200" x="279.86" y="250" as="geometry" />
+        </mxCell>
+        <mxCell id="hHGaCTHHTJgc5KuL15BD-3" edge="1" parent="1" source="hHGaCTHHTJgc5KuL15BD-1" style="edgeStyle=orthogonalEdgeStyle;" target="hHGaCTHHTJgc5KuL15BD-2">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="hHGaCTHHTJgc5KuL15BD-4" parent="1" style="rhombus;whiteSpace=wrap;html=1;fillColor=#1e2a1e;fontColor=#f5a623;strokeColor=#f5a623;fontSize=11;" value="讀取 GPIO9&#xa;（推桿底部感測器）" vertex="1">
+          <mxGeometry height="80" width="210" x="274.86" y="328" as="geometry" />
+        </mxCell>
+        <mxCell id="hHGaCTHHTJgc5KuL15BD-5" edge="1" parent="1" source="hHGaCTHHTJgc5KuL15BD-2" style="edgeStyle=orthogonalEdgeStyle;" target="hHGaCTHHTJgc5KuL15BD-4">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="hHGaCTHHTJgc5KuL15BD-6" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#1a2a1e;fontColor=#3ecf8e;strokeColor=#3ecf8e;fontSize=11;" value="馬達 ENA = LOW（鎖定）&#xa;執行圓盤歸零（GPIO3校正）&#xa;推桿上升推圓片封孔" vertex="1">
+          <mxGeometry height="70" width="200" x="539.86" y="610" as="geometry" />
+        </mxCell>
+        <mxCell id="hHGaCTHHTJgc5KuL15BD-7" edge="1" parent="1" source="hHGaCTHHTJgc5KuL15BD-4" style="edgeStyle=orthogonalEdgeStyle;fontColor=#3ecf8e;strokeColor=#3ecf8e;" target="hHGaCTHHTJgc5KuL15BD-6" value="觸發&#xa;（推桿在底部）">
+          <mxGeometry relative="1" x="0.6883" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="hHGaCTHHTJgc5KuL15BD-8" parent="1" style="ellipse;whiteSpace=wrap;html=1;fillColor=#1a2a1e;fontColor=#3ecf8e;strokeColor=#3ecf8e;fontSize=12;fontStyle=1;" value="✅ 進入待機（IDLE）" vertex="1">
+          <mxGeometry height="50" width="160" x="559.86" y="740" as="geometry" />
+        </mxCell>
+        <mxCell id="hHGaCTHHTJgc5KuL15BD-9" edge="1" parent="1" source="hHGaCTHHTJgc5KuL15BD-6" style="edgeStyle=orthogonalEdgeStyle;strokeColor=#3ecf8e;" target="hHGaCTHHTJgc5KuL15BD-8">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="hHGaCTHHTJgc5KuL15BD-10" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#2a1f1f;fontColor=#f56565;strokeColor=#f56565;fontSize=11;" value="推桿馬達 ENA = HIGH（釋放）&#xa;LED 閃爍 + 音效警示" vertex="1">
+          <mxGeometry height="60" width="210" x="274.86" y="480" as="geometry" />
+        </mxCell>
+        <mxCell id="hHGaCTHHTJgc5KuL15BD-11" edge="1" parent="1" source="hHGaCTHHTJgc5KuL15BD-4" style="edgeStyle=orthogonalEdgeStyle;fontColor=#f56565;strokeColor=#f56565;" target="hHGaCTHHTJgc5KuL15BD-10" value="未觸發&#xa;（位置不明）">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="hHGaCTHHTJgc5KuL15BD-12" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#2a1f0a;fontColor=#f5a623;strokeColor=#f5a623;fontSize=11;" value="⚠️ 網頁顯示警告&#xa;「請確認推桿是否在圓盤下方，&#xa;確認後按下確認鍵」" vertex="1">
+          <mxGeometry height="70" width="175" x="292.36" y="590" as="geometry" />
+        </mxCell>
+        <mxCell id="hHGaCTHHTJgc5KuL15BD-13" edge="1" parent="1" source="hHGaCTHHTJgc5KuL15BD-10" style="edgeStyle=orthogonalEdgeStyle;strokeColor=#f5a623;" target="hHGaCTHHTJgc5KuL15BD-12">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="hHGaCTHHTJgc5KuL15BD-14" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#1e1e2a;fontColor=#8ab4f8;strokeColor=#4f9cf9;fontSize=11;" value="等待網頁確認鍵" vertex="1">
+          <mxGeometry height="50" width="170" x="294.86" y="710" as="geometry" />
+        </mxCell>
+        <mxCell id="hHGaCTHHTJgc5KuL15BD-15" edge="1" parent="1" source="hHGaCTHHTJgc5KuL15BD-12" style="edgeStyle=orthogonalEdgeStyle;" target="hHGaCTHHTJgc5KuL15BD-14">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="hHGaCTHHTJgc5KuL15BD-16" parent="1" style="rhombus;whiteSpace=wrap;html=1;fillColor=#1e2a1e;fontColor=#f5a623;strokeColor=#f5a623;fontSize=11;" value="再次讀取 GPIO9" vertex="1">
+          <mxGeometry height="70" width="180" x="289.86" y="805" as="geometry" />
+        </mxCell>
+        <mxCell id="hHGaCTHHTJgc5KuL15BD-17" edge="1" parent="1" source="hHGaCTHHTJgc5KuL15BD-14" style="edgeStyle=orthogonalEdgeStyle;" target="hHGaCTHHTJgc5KuL15BD-16">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="hHGaCTHHTJgc5KuL15BD-18" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;fontColor=#3ecf8e;strokeColor=#3ecf8e;" value="觸發">
+          <mxGeometry relative="1" x="-0.625" as="geometry">
+            <mxPoint as="offset" />
+            <Array as="points">
+              <mxPoint x="509.86" y="840" />
+              <mxPoint x="509.86" y="490" />
+              <mxPoint x="639.86" y="490" />
+              <mxPoint x="639.86" y="610" />
+            </Array>
+            <mxPoint x="479.86" y="840" as="sourcePoint" />
+            <mxPoint x="649.8599999999998" y="610" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="hHGaCTHHTJgc5KuL15BD-19" edge="1" parent="1" source="hHGaCTHHTJgc5KuL15BD-16" style="edgeStyle=orthogonalEdgeStyle;fontColor=#f56565;strokeColor=#f56565;" target="hHGaCTHHTJgc5KuL15BD-12" value="未觸發">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="239.86" y="840" />
+              <mxPoint x="239.86" y="625" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="hHGaCTHHTJgc5KuL15BD-64" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#1f1f2a;fontColor=#b39ddb;strokeColor=#7c6aff;fontSize=11;" value="📱 網頁按「進入補藥模式」" vertex="1">
+          <mxGeometry height="50" width="140" x="1070" y="60" as="geometry" />
+        </mxCell>
+        <mxCell id="hHGaCTHHTJgc5KuL15BD-65" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#1f1f2a;fontColor=#b39ddb;strokeColor=#7c6aff;fontSize=11;" value="👆 電容觸摸開關（GPIO8）" vertex="1">
+          <mxGeometry height="50" width="150" x="1230" y="60" as="geometry" />
+        </mxCell>
+        <mxCell id="hHGaCTHHTJgc5KuL15BD-67" edge="1" parent="1" source="hHGaCTHHTJgc5KuL15BD-64" style="edgeStyle=orthogonalEdgeStyle;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" target="hHGaCTHHTJgc5KuL15BD-69">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="1215" y="170" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="hHGaCTHHTJgc5KuL15BD-68" edge="1" parent="1" source="hHGaCTHHTJgc5KuL15BD-65" style="edgeStyle=orthogonalEdgeStyle;" target="hHGaCTHHTJgc5KuL15BD-69">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="1215" y="170" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="hHGaCTHHTJgc5KuL15BD-69" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#1e1e2a;fontColor=#8ab4f8;strokeColor=#4f9cf9;fontSize=11;" value="⬇️ [安全確認] 推桿下降到底部（GPIO9）&#xa;圓盤歸零（GPIO3校正）" vertex="1">
+          <mxGeometry height="60" width="230" x="1115" y="210" as="geometry" />
+        </mxCell>
+        <mxCell id="hHGaCTHHTJgc5KuL15BD-71" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#1a2a1e;fontColor=#3ecf8e;strokeColor=#3ecf8e;fontSize=11;" value="📲 網頁顯示放藥引導&#xa;（依鬧鐘排序順序）" vertex="1">
+          <mxGeometry height="60" width="230" x="1115" y="305" as="geometry" />
+        </mxCell>
+        <mxCell id="hHGaCTHHTJgc5KuL15BD-72" edge="1" parent="1" source="hHGaCTHHTJgc5KuL15BD-69" style="edgeStyle=orthogonalEdgeStyle;" target="hHGaCTHHTJgc5KuL15BD-71">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="hHGaCTHHTJgc5KuL15BD-73" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#1f1f2a;fontColor=#b39ddb;strokeColor=#7c6aff;fontSize=11;" value="&amp;nbsp;照顧者：&lt;span style=&quot;background-color: transparent; color: light-dark(rgb(179, 157, 219), rgb(105, 86, 139));&quot;&gt;把蓋子空杯裝藥，依序放入藥杯&lt;/span&gt;&lt;div&gt;&lt;div&gt;位置1 → 位置N（依鬧鐘順序）&lt;/div&gt;&lt;/div&gt;" vertex="1">
+          <mxGeometry height="50" width="230" x="1115" y="410" as="geometry" />
+        </mxCell>
+        <mxCell id="hHGaCTHHTJgc5KuL15BD-74" edge="1" parent="1" source="hHGaCTHHTJgc5KuL15BD-71" style="edgeStyle=orthogonalEdgeStyle;" target="hHGaCTHHTJgc5KuL15BD-73">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="hHGaCTHHTJgc5KuL15BD-75" parent="1" style="rhombus;whiteSpace=wrap;html=1;fillColor=#1e2a1e;fontColor=#f5a623;strokeColor=#f5a623;fontSize=11;" value="蓋子偵測 = 0？" vertex="1">
+          <mxGeometry height="70" width="160" x="1150" y="500" as="geometry" />
+        </mxCell>
+        <mxCell id="hHGaCTHHTJgc5KuL15BD-76" edge="1" parent="1" source="hHGaCTHHTJgc5KuL15BD-73" style="edgeStyle=orthogonalEdgeStyle;" target="hHGaCTHHTJgc5KuL15BD-75">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="hHGaCTHHTJgc5KuL15BD-77" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#2a1f1f;fontColor=#f56565;strokeColor=#f56565;fontSize=11;" value="⚠️ 網頁提示&#xa;「還有空杯未收走」" vertex="1">
+          <mxGeometry height="55" width="170" x="1360" y="507.5" as="geometry" />
+        </mxCell>
+        <mxCell id="hHGaCTHHTJgc5KuL15BD-78" edge="1" parent="1" source="hHGaCTHHTJgc5KuL15BD-75" style="edgeStyle=orthogonalEdgeStyle;fontColor=#f56565;strokeColor=#f56565;" target="hHGaCTHHTJgc5KuL15BD-77" value="否">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="hHGaCTHHTJgc5KuL15BD-81" edge="1" parent="1" source="hHGaCTHHTJgc5KuL15BD-75" style="edgeStyle=orthogonalEdgeStyle;fontColor=#3ecf8e;strokeColor=#3ecf8e;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" target="hHGaCTHHTJgc5KuL15BD-82" value="是">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="1230" y="615" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="hHGaCTHHTJgc5KuL15BD-82" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#1f1f2a;fontColor=#b39ddb;strokeColor=#7c6aff;fontSize=11;" value="🔒 照顧者關上蓋子" vertex="1">
+          <mxGeometry height="50" width="230" x="1115" y="620" as="geometry" />
+        </mxCell>
+        <mxCell id="hHGaCTHHTJgc5KuL15BD-84" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#1f1f2a;fontColor=#b39ddb;strokeColor=#7c6aff;fontSize=11;" value="✅ 按下網頁「補藥完成」" vertex="1">
+          <mxGeometry height="50" width="230" x="1115" y="710" as="geometry" />
+        </mxCell>
+        <mxCell id="hHGaCTHHTJgc5KuL15BD-85" edge="1" parent="1" source="hHGaCTHHTJgc5KuL15BD-82" style="edgeStyle=orthogonalEdgeStyle;" target="hHGaCTHHTJgc5KuL15BD-84">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="hHGaCTHHTJgc5KuL15BD-86" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#1e1e2a;fontColor=#8ab4f8;strokeColor=#4f9cf9;fontSize=11;" value="cups[1~N] = 1，cups[N+1~5] = x&#xa;next_cup_index = 1&#xa;清除強制回收記錄" vertex="1">
+          <mxGeometry height="70" width="230" x="1115" y="795" as="geometry" />
+        </mxCell>
+        <mxCell id="hHGaCTHHTJgc5KuL15BD-87" edge="1" parent="1" source="hHGaCTHHTJgc5KuL15BD-84" style="edgeStyle=orthogonalEdgeStyle;" target="hHGaCTHHTJgc5KuL15BD-86">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="hHGaCTHHTJgc5KuL15BD-88" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#1e1e2a;fontColor=#8ab4f8;strokeColor=#4f9cf9;fontSize=11;" value="⬆️ 推桿上升推圓片封孔" vertex="1">
+          <mxGeometry height="50" width="230" x="1115" y="905" as="geometry" />
+        </mxCell>
+        <mxCell id="hHGaCTHHTJgc5KuL15BD-89" edge="1" parent="1" source="hHGaCTHHTJgc5KuL15BD-86" style="edgeStyle=orthogonalEdgeStyle;" target="hHGaCTHHTJgc5KuL15BD-88">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="hHGaCTHHTJgc5KuL15BD-90" parent="1" style="ellipse;whiteSpace=wrap;html=1;fillColor=#1a2a1e;fontColor=#3ecf8e;strokeColor=#3ecf8e;fontSize=12;fontStyle=1;" value="✅ 補藥完成，進入待機（IDLE）" vertex="1">
+          <mxGeometry height="50" width="224" x="1118" y="1015" as="geometry" />
+        </mxCell>
+        <mxCell id="hHGaCTHHTJgc5KuL15BD-91" edge="1" parent="1" source="hHGaCTHHTJgc5KuL15BD-88" style="edgeStyle=orthogonalEdgeStyle;strokeColor=#3ecf8e;" target="hHGaCTHHTJgc5KuL15BD-90">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+  <diagram id="5daIYG93AO2dGamVHUhW" name="第 2 页">
+    <mxGraphModel dx="930" dy="685" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1169" pageHeight="827" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="zWR-rn9_SOq2XFdHy5pp-20" parent="1" style="ellipse;whiteSpace=wrap;html=1;fillColor=#7B68EE;fontColor=#ffffff;strokeColor=#6656CC;fontSize=12;fontStyle=1;" value="⏰ NTP 鬧鐘時間到" vertex="1">
+          <mxGeometry height="50" width="200" x="570" y="110" as="geometry" />
+        </mxCell>
+        <mxCell id="zWR-rn9_SOq2XFdHy5pp-21" parent="1" style="rhombus;whiteSpace=wrap;html=1;fillColor=#1e2a1e;fontColor=#f5a623;strokeColor=#f5a623;fontSize=11;" value="所有藥杯都是&#xa;0 或 x？" vertex="1">
+          <mxGeometry height="80" width="210" x="565" y="200" as="geometry" />
+        </mxCell>
+        <mxCell id="zWR-rn9_SOq2XFdHy5pp-22" edge="1" parent="1" source="zWR-rn9_SOq2XFdHy5pp-20" style="edgeStyle=orthogonalEdgeStyle;" target="zWR-rn9_SOq2XFdHy5pp-21">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="zWR-rn9_SOq2XFdHy5pp-23" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#2a1f1f;fontColor=#f56565;strokeColor=#f56565;fontSize=11;" value="🔔 播放提示音效&#xa;網頁顯示「請補藥」" vertex="1">
+          <mxGeometry height="60" width="170" x="815" y="210" as="geometry" />
+        </mxCell>
+        <mxCell id="zWR-rn9_SOq2XFdHy5pp-24" edge="1" parent="1" source="zWR-rn9_SOq2XFdHy5pp-21" style="edgeStyle=orthogonalEdgeStyle;fontColor=#f56565;strokeColor=#f56565;" target="zWR-rn9_SOq2XFdHy5pp-23" value="是">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="zWR-rn9_SOq2XFdHy5pp-25" parent="1" style="rhombus;whiteSpace=wrap;html=1;fillColor=#1e2a1e;fontColor=#f5a623;strokeColor=#f5a623;fontSize=11;" value="此位置上次&#xa;強制回收？" vertex="1">
+          <mxGeometry height="80" width="210" x="565" y="325" as="geometry" />
+        </mxCell>
+        <mxCell id="zWR-rn9_SOq2XFdHy5pp-26" edge="1" parent="1" source="zWR-rn9_SOq2XFdHy5pp-21" style="edgeStyle=orthogonalEdgeStyle;fontColor=#3ecf8e;strokeColor=#3ecf8e;" target="zWR-rn9_SOq2XFdHy5pp-25" value="否">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="zWR-rn9_SOq2XFdHy5pp-27" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#2a1f0a;fontColor=#f5a623;strokeColor=#f5a623;fontSize=11;" value="⚠️ 網頁顯示&#xa;「此藥杯上次未取走，仍繼續出藥」" vertex="1">
+          <mxGeometry height="60" width="200" x="815" y="335" as="geometry" />
+        </mxCell>
+        <mxCell id="zWR-rn9_SOq2XFdHy5pp-28" edge="1" parent="1" source="zWR-rn9_SOq2XFdHy5pp-25" style="edgeStyle=orthogonalEdgeStyle;fontColor=#f5a623;strokeColor=#f5a623;" target="zWR-rn9_SOq2XFdHy5pp-27" value="有">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="zWR-rn9_SOq2XFdHy5pp-29" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#1e1e2a;fontColor=#8ab4f8;strokeColor=#4f9cf9;fontSize=11;" value="⬇️ [安全確認] 推桿下降到底部&#xa;（GPIO9確認，圓片落回位置0）" vertex="1">
+          <mxGeometry height="60" width="230" x="555" y="440" as="geometry" />
+        </mxCell>
+        <mxCell id="zWR-rn9_SOq2XFdHy5pp-30" edge="1" parent="1" source="zWR-rn9_SOq2XFdHy5pp-25" style="edgeStyle=orthogonalEdgeStyle;strokeColor=#3ecf8e;" target="zWR-rn9_SOq2XFdHy5pp-29" value="無">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="zWR-rn9_SOq2XFdHy5pp-31" edge="1" parent="1" source="zWR-rn9_SOq2XFdHy5pp-27" style="edgeStyle=orthogonalEdgeStyle;" target="zWR-rn9_SOq2XFdHy5pp-29">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="910" y="440" />
+              <mxPoint x="910" y="485" />
+              <mxPoint x="785" y="485" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="zWR-rn9_SOq2XFdHy5pp-32" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#1e1e2a;fontColor=#8ab4f8;strokeColor=#4f9cf9;fontSize=11;" value="🔄 圓盤旋轉 → 目標位置對準出藥孔" vertex="1">
+          <mxGeometry height="50" width="230" x="555" y="540" as="geometry" />
+        </mxCell>
+        <mxCell id="zWR-rn9_SOq2XFdHy5pp-33" edge="1" parent="1" source="zWR-rn9_SOq2XFdHy5pp-29" style="edgeStyle=orthogonalEdgeStyle;" target="zWR-rn9_SOq2XFdHy5pp-32">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="zWR-rn9_SOq2XFdHy5pp-34" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#1e1e2a;fontColor=#8ab4f8;strokeColor=#4f9cf9;fontSize=11;" value="⬆️ 推桿上升，藥杯推出出藥孔" vertex="1">
+          <mxGeometry height="50" width="230" x="555" y="640" as="geometry" />
+        </mxCell>
+        <mxCell id="zWR-rn9_SOq2XFdHy5pp-35" edge="1" parent="1" source="zWR-rn9_SOq2XFdHy5pp-32" style="edgeStyle=orthogonalEdgeStyle;" target="zWR-rn9_SOq2XFdHy5pp-34">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="zWR-rn9_SOq2XFdHy5pp-36" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#1a2a1e;fontColor=#3ecf8e;strokeColor=#3ecf8e;fontSize=11;" value="🎵 播放提示音效，通知老人取藥&#xa;⏱ 開始計時監控" vertex="1">
+          <mxGeometry height="55" width="230" x="555" y="750" as="geometry" />
+        </mxCell>
+        <mxCell id="zWR-rn9_SOq2XFdHy5pp-37" edge="1" parent="1" source="zWR-rn9_SOq2XFdHy5pp-34" style="edgeStyle=orthogonalEdgeStyle;" target="zWR-rn9_SOq2XFdHy5pp-36">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="zWR-rn9_SOq2XFdHy5pp-38" parent="1" style="rhombus;whiteSpace=wrap;html=1;fillColor=#1e2a1e;fontColor=#f5a623;strokeColor=#f5a623;fontSize=11;" value="偵測到藥杯取走&#xa;持續 5 秒？" vertex="1">
+          <mxGeometry height="80" width="170" x="585" y="840" as="geometry" />
+        </mxCell>
+        <mxCell id="zWR-rn9_SOq2XFdHy5pp-39" edge="1" parent="1" source="zWR-rn9_SOq2XFdHy5pp-36" style="edgeStyle=orthogonalEdgeStyle;" target="zWR-rn9_SOq2XFdHy5pp-38">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="zWR-rn9_SOq2XFdHy5pp-40" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#1a2a1e;fontColor=#3ecf8e;strokeColor=#3ecf8e;fontSize=11;" value="✅ cups[i] = 0&#xa;log: taken" vertex="1">
+          <mxGeometry height="60" width="140" x="350" y="850" as="geometry" />
+        </mxCell>
+        <mxCell id="zWR-rn9_SOq2XFdHy5pp-41" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;fontColor=#3ecf8e;strokeColor=#3ecf8e;" target="zWR-rn9_SOq2XFdHy5pp-40" value="是">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="580" y="880" as="sourcePoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="zWR-rn9_SOq2XFdHy5pp-42" parent="1" style="rhombus;whiteSpace=wrap;html=1;fillColor=#1e2a1e;fontColor=#f5a623;strokeColor=#f5a623;fontSize=11;" value="蓋子偵測 +1？" vertex="1">
+          <mxGeometry height="70" width="160" x="340" y="985" as="geometry" />
+        </mxCell>
+        <mxCell id="zWR-rn9_SOq2XFdHy5pp-43" edge="1" parent="1" source="zWR-rn9_SOq2XFdHy5pp-40" style="edgeStyle=orthogonalEdgeStyle;" target="zWR-rn9_SOq2XFdHy5pp-42">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="zWR-rn9_SOq2XFdHy5pp-44" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#1a2a1e;fontColor=#3ecf8e;strokeColor=#3ecf8e;fontSize=11;" value="✅ 吃藥完成確認" vertex="1">
+          <mxGeometry height="50" width="110" x="160" y="995" as="geometry" />
+        </mxCell>
+        <mxCell id="zWR-rn9_SOq2XFdHy5pp-45" edge="1" parent="1" source="zWR-rn9_SOq2XFdHy5pp-42" style="edgeStyle=orthogonalEdgeStyle;fontColor=#3ecf8e;strokeColor=#3ecf8e;" target="zWR-rn9_SOq2XFdHy5pp-44" value="是">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="zWR-rn9_SOq2XFdHy5pp-46" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#2a1f1f;fontColor=#f56565;strokeColor=#f56565;fontSize=11;" value="⚠️ 網頁警告&#xa;蓋子狀態異常" vertex="1">
+          <mxGeometry height="42.5" width="150" x="345" y="1192.5" as="geometry" />
+        </mxCell>
+        <mxCell id="zWR-rn9_SOq2XFdHy5pp-47" edge="1" parent="1" source="zWR-rn9_SOq2XFdHy5pp-42" style="edgeStyle=orthogonalEdgeStyle;fontColor=#f56565;strokeColor=#f56565;" target="yrhKpzuXGV4lPoTbvLn1-5" value="否">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="zWR-rn9_SOq2XFdHy5pp-48" parent="1" style="rhombus;whiteSpace=wrap;html=1;fillColor=#1e2a1e;fontColor=#f5a623;strokeColor=#f5a623;fontSize=11;" value="超過 2 分鐘未取走？" vertex="1">
+          <mxGeometry height="70" width="168" x="583" y="985" as="geometry" />
+        </mxCell>
+        <mxCell id="zWR-rn9_SOq2XFdHy5pp-49" edge="1" parent="1" source="zWR-rn9_SOq2XFdHy5pp-38" style="edgeStyle=orthogonalEdgeStyle;" target="zWR-rn9_SOq2XFdHy5pp-48" value="否（繼續等待）">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="zWR-rn9_SOq2XFdHy5pp-50" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#2a1f0a;fontColor=#f5a623;strokeColor=#f5a623;fontSize=11;" value="🔔 播放提醒音效" vertex="1">
+          <mxGeometry height="50" width="160" x="825" y="995" as="geometry" />
+        </mxCell>
+        <mxCell id="zWR-rn9_SOq2XFdHy5pp-51" edge="1" parent="1" source="zWR-rn9_SOq2XFdHy5pp-48" style="edgeStyle=orthogonalEdgeStyle;fontColor=#f5a623;strokeColor=#f5a623;" target="zWR-rn9_SOq2XFdHy5pp-50" value="是">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="zWR-rn9_SOq2XFdHy5pp-52" parent="1" style="rhombus;whiteSpace=wrap;html=1;fillColor=#1e2a1e;fontColor=#f5a623;strokeColor=#f5a623;fontSize=11;" value="超過 3 分鐘未取走？" vertex="1">
+          <mxGeometry height="70" width="210" x="562" y="1110" as="geometry" />
+        </mxCell>
+        <mxCell id="zWR-rn9_SOq2XFdHy5pp-53" edge="1" parent="1" source="zWR-rn9_SOq2XFdHy5pp-48" style="edgeStyle=orthogonalEdgeStyle;" target="zWR-rn9_SOq2XFdHy5pp-52" value="否">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="zWR-rn9_SOq2XFdHy5pp-54" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;" value="否（繼續等）">
+          <mxGeometry relative="1" x="0.2631" y="-5" as="geometry">
+            <mxPoint as="offset" />
+            <Array as="points">
+              <mxPoint x="555" y="1145" />
+              <mxPoint x="555" y="880" />
+            </Array>
+            <mxPoint x="570" y="1145" as="sourcePoint" />
+            <mxPoint x="580" y="880" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="zWR-rn9_SOq2XFdHy5pp-55" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#2a1f1f;fontColor=#f56565;strokeColor=#f56565;fontSize=11;" value="🚨 強制回收&#xa;推桿下降（藥杯落回原位）&#xa;cups[i] 維持 = 1&#xa;log: not_taken" vertex="1">
+          <mxGeometry height="90" width="180" x="815" y="1100" as="geometry" />
+        </mxCell>
+        <mxCell id="zWR-rn9_SOq2XFdHy5pp-56" edge="1" parent="1" source="zWR-rn9_SOq2XFdHy5pp-52" style="edgeStyle=orthogonalEdgeStyle;fontColor=#f56565;strokeColor=#f56565;" target="zWR-rn9_SOq2XFdHy5pp-55" value="是">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="zWR-rn9_SOq2XFdHy5pp-57" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#2a1f0a;fontColor=#f5a623;strokeColor=#f5a623;fontSize=11;" value="📲 網頁警告照顧者&#xa;「位置X 藥杯未被取走」" vertex="1">
+          <mxGeometry height="60" width="180" x="815" y="1235" as="geometry" />
+        </mxCell>
+        <mxCell id="zWR-rn9_SOq2XFdHy5pp-58" edge="1" parent="1" source="zWR-rn9_SOq2XFdHy5pp-55" style="edgeStyle=orthogonalEdgeStyle;" target="zWR-rn9_SOq2XFdHy5pp-57">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="zWR-rn9_SOq2XFdHy5pp-59" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#1e1e2a;fontColor=#8ab4f8;strokeColor=#4f9cf9;fontSize=11;" value="🏠 [安全確認] 推桿下降到底部&#xa;→ 圓盤歸零（GPIO3校正）&#xa;→ 推桿上升推圓片封孔" vertex="1">
+          <mxGeometry height="70" width="220" x="560" y="1230" as="geometry" />
+        </mxCell>
+        <mxCell id="zWR-rn9_SOq2XFdHy5pp-60" edge="1" parent="1" source="zWR-rn9_SOq2XFdHy5pp-44" style="edgeStyle=orthogonalEdgeStyle;" target="zWR-rn9_SOq2XFdHy5pp-59">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="215" y="1265" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="zWR-rn9_SOq2XFdHy5pp-61" edge="1" parent="1" source="zWR-rn9_SOq2XFdHy5pp-57" style="edgeStyle=orthogonalEdgeStyle;" target="zWR-rn9_SOq2XFdHy5pp-59">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="894" y="1265" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="zWR-rn9_SOq2XFdHy5pp-62" parent="1" style="ellipse;whiteSpace=wrap;html=1;fillColor=#1a2a1e;fontColor=#3ecf8e;strokeColor=#3ecf8e;fontSize=12;fontStyle=1;" value="✅ 進入待機（IDLE）" vertex="1">
+          <mxGeometry height="50" width="164" x="588" y="1350" as="geometry" />
+        </mxCell>
+        <mxCell id="zWR-rn9_SOq2XFdHy5pp-63" edge="1" parent="1" source="zWR-rn9_SOq2XFdHy5pp-59" style="edgeStyle=orthogonalEdgeStyle;strokeColor=#3ecf8e;" target="zWR-rn9_SOq2XFdHy5pp-62">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="zWR-rn9_SOq2XFdHy5pp-64" edge="1" parent="1" source="zWR-rn9_SOq2XFdHy5pp-29" style="edgeStyle=none;curved=1;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0;exitY=0.5;exitDx=0;exitDy=0;fontSize=12;startSize=8;endSize=8;" target="zWR-rn9_SOq2XFdHy5pp-29">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="zWR-rn9_SOq2XFdHy5pp-65" edge="1" parent="1" source="zWR-rn9_SOq2XFdHy5pp-50" style="edgeStyle=none;curved=1;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.25;exitY=1;exitDx=0;exitDy=0;fontSize=12;startSize=8;endSize=8;" target="zWR-rn9_SOq2XFdHy5pp-50">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="yrhKpzuXGV4lPoTbvLn1-6" edge="1" parent="1" source="yrhKpzuXGV4lPoTbvLn1-5" style="edgeStyle=none;curved=1;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;fontSize=12;startSize=8;endSize=8;fillColor=#60a917;strokeColor=#2D7600;" target="zWR-rn9_SOq2XFdHy5pp-46" value="&lt;font style=&quot;color: light-dark(rgb(0, 0, 0), rgb(0, 204, 0));&quot;&gt;是&lt;/font&gt;">
+          <mxGeometry relative="1" x="-0.2381" as="geometry">
+            <mxPoint as="offset" />
+            <Array as="points">
+              <mxPoint x="420" y="1160" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="yrhKpzuXGV4lPoTbvLn1-7" edge="1" parent="1" source="yrhKpzuXGV4lPoTbvLn1-5" style="edgeStyle=none;curved=0;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;entryX=1;entryY=0.5;entryDx=0;entryDy=0;fontSize=12;startSize=8;endSize=8;exitX=1;exitY=0.5;exitDx=0;exitDy=0;strokeColor=none;" target="zWR-rn9_SOq2XFdHy5pp-42">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="510" y="1115" />
+              <mxPoint x="520" y="1010" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="yrhKpzuXGV4lPoTbvLn1-8" edge="1" parent="1" source="yrhKpzuXGV4lPoTbvLn1-5" style="edgeStyle=none;curved=0;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=1;entryY=0.5;entryDx=0;entryDy=0;fontSize=12;startSize=8;endSize=8;" target="zWR-rn9_SOq2XFdHy5pp-42">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="530" y="1115" />
+              <mxPoint x="530" y="1020" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="yrhKpzuXGV4lPoTbvLn1-9" connectable="0" parent="yrhKpzuXGV4lPoTbvLn1-8" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];fontSize=12;" value="否" vertex="1">
+          <mxGeometry relative="1" x="-0.6273" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="yrhKpzuXGV4lPoTbvLn1-5" parent="1" style="rhombus;whiteSpace=wrap;html=1;fillColor=#1e2a1e;fontColor=#f5a623;strokeColor=#f5a623;fontSize=11;" value="超過1分鐘？" vertex="1">
+          <mxGeometry height="50" width="100" x="370" y="1090" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
