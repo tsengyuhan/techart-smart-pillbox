@@ -9,8 +9,8 @@
 
 | 負責人 | Git 分支 | 負責檔案 | 工作範圍 |
 |--------|----------|----------|----------|
-| **Antigravity** | `antigravity/web-ui` | `index.html`, `style.css`, `ui.js` | 網頁介面設計、UI/UX、畫面美化 |
-| **Claude** | `claude/esp32-api` | `website_control.ino`, `api.js` | ESP32 韌體、Firebase 通訊、API |
+| **Antigravity** | `antigravity/web-ui` | `index.html`, `css/style.css`, `js/ui.js` | 網頁介面設計、UI/UX、畫面美化 |
+| **Claude** | `claude/esp32-api` | `website_control.ino`, `js/api.js` | ESP32 韌體、Firebase 通訊、API |
 
 ---
 
@@ -20,15 +20,17 @@
 
 ```
 control_app/
-├── index.html          ← Antigravity 負責（HTML 結構與版面）
-├── style.css           ← Antigravity 負責（所有樣式）
-├── ui.js               ← Antigravity 負責（UI 互動、DOM 操作、動畫）
-├── api.js              ← Claude 負責（Firebase 初始化、資料監聽、指令發送）
+├── index.html              ← Antigravity 負責（HTML 結構與版面）
+├── css/
+│   └── style.css           ← Antigravity 負責（所有樣式）
+├── js/
+│   ├── api.js              ← Claude 負責（Firebase 初始化、資料監聽、指令發送）
+│   └── ui.js               ← Antigravity 負責（UI 互動、DOM 操作、動畫）
 ├── website_control/
-│   └── website_control.ino  ← Claude 負責（ESP32 韌體）
-├── COLLABORATION.md    ← 本文件（分工說明）
-├── 規格書3.0.md         ← 共用參考文件（勿修改）
-└── 流程圖/              ← 共用參考（勿修改）
+│   └── website_control.ino ← Claude 負責（ESP32 韌體）
+├── COLLABORATION.md        ← 本文件（分工說明）
+├── 規格書3.0.md             ← 共用參考文件（勿修改）
+└── 流程圖/                  ← 共用參考（勿修改）
 ```
 
 ---
@@ -77,10 +79,11 @@ function updateConnectionStatus(isOnline) { ... }
 
 ```html
 <!-- index.html 中的載入順序 -->
+<link rel="stylesheet" href="css/style.css">
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
-<script src="api.js"></script>   <!-- 先載入：提供 sendCommand 等 -->
-<script src="ui.js"></script>    <!-- 後載入：呼叫 api.js 的函式，實作 UI 回呼 -->
+<script src="js/api.js"></script>   <!-- 先載入：提供 sendCommand 等 -->
+<script src="js/ui.js"></script>    <!-- 後載入：呼叫 api.js 的函式，實作 UI 回呼 -->
 ```
 
 ---
@@ -133,8 +136,8 @@ function updateConnectionStatus(isOnline) { ... }
 ### 🚫 不可以做的事
 
 1. **不要修改對方負責的檔案**
-   - Antigravity 不要動 `api.js` 和 `website_control.ino`
-   - Claude 不要動 `index.html`、`style.css`、`ui.js`
+   - Antigravity 不要動 `js/api.js` 和 `website_control/website_control.ino`
+   - Claude 不要動 `index.html`、`css/style.css`、`js/ui.js`
 2. **不要修改共用參考文件**（`規格書3.0.md`、`流程圖/`）
 3. **不要改變約定好的介面**（函式名稱、參數格式），除非先和對方討論
 
