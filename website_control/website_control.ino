@@ -308,8 +308,10 @@ void uploadStatus() {
   // 3. 單點霍爾
   json.set("hall_sensor", movingCupState);
 
-  // 4. 心跳時間戳記
-  json.set("last_seen", (unsigned long)millis());
+  // 4. 心跳時間戳記 (NTP Unix timestamp)
+  time_t now;
+  time(&now);
+  json.set("last_seen", (unsigned long)now);
 
   // 5. 蓋子偵測資訊
   // 計算目前數量
