@@ -15,122 +15,206 @@
 </head>
 
 <body>
+    <div class="app-container">
+        <!-- 頂部標題列 -->
+        <header class="app-header">
+            <h1 id="page-title">💊 智慧藥盒</h1>
+            <div id="connection-status" class="status-badge offline">🔴 離線</div>
+        </header>
 
-    <div class="container">
-        <h1>💊 藥盒控制中心</h1>
-
-        <!-- 補藥模式提示 (預設隱藏) -->
-        <div id="refill-status" class="refill-banner" style="display: none;">
-            ⚠️ 補藥模式開啟中 (馬達已歸零)
-        </div>
-
-        <p id="loading">連線資料庫中...</p>
-
-        <h2>即時監控 (Monitor)</h2>
-
-        <div class="status-box">
-            <div class="status-item">
-                <div>目前溫度</div>
-                <div id="temp-display" class="status-value">-- °C</div>
+        <!-- 主要內容區 -->
+        <main class="app-main">
+            <!-- 補藥模式 Banner (共用警告) -->
+            <div id="refill-status" class="refill-banner" style="display: none;">
+                ⚠️ 補藥模式開啟中 (機器已鎖定)
             </div>
-            <div class="status-item">
-                <div>連線狀態</div>
-                <div id="connection-status" style="font-size: 1em; color: gray;">等待中...</div>
-            </div>
-        </div>
 
-        <div style="text-align: center; color: #555;">內部圓盤藥杯狀態</div>
-        <div class="cups-container">
-            <div id="cup-0" class="cup-indicator">1</div>
-            <div id="cup-1" class="cup-indicator">2</div>
-            <div id="cup-2" class="cup-indicator">3</div>
-            <div id="cup-3" class="cup-indicator">4</div>
-            <div id="cup-4" class="cup-indicator">5</div>
-        </div>
-
-        <div style="margin-top: 15px; padding: 10px; background: #fff3e0; border-radius: 8px;">
-            <div style="text-align: center; font-weight: bold; color: #e65100;">蓋子藥杯監控</div>
-            <div style="display: flex; justify-content: space-around; margin-top: 10px;">
-                <div style="text-align: center;">
-                    <div style="font-size: 0.8em; color: #888;">目前數量</div>
-                    <div id="lid-count" style="font-size: 1.5em; font-weight: bold;">--</div>
+            <!-- 1. 監控首頁 (Dashboard) -->
+            <section id="page-dashboard" class="page active">
+                <div class="card status-card">
+                    <div class="status-item">
+                        <div>下一次出藥</div>
+                        <div id="next-alarm-display" class="status-value highlight">--:--</div>
+                    </div>
+                    <div class="status-item">
+                        <div>目前溫度</div>
+                        <div id="temp-display" class="status-value">-- °C</div>
+                    </div>
                 </div>
-                <div style="text-align: center;">
-                    <div style="font-size: 0.8em; color: #888;">目標設定</div>
-                    <div id="lid-target" style="font-size: 1.5em; font-weight: bold;">--</div>
+
+                <div class="card cups-card">
+                    <div class="card-title">圓盤藥杯狀態</div>
+                    <div class="cups-container">
+                        <div id="cup-0" class="cup-indicator">1</div>
+                        <div id="cup-1" class="cup-indicator">2</div>
+                        <div id="cup-2" class="cup-indicator">3</div>
+                        <div id="cup-3" class="cup-indicator">4</div>
+                        <div id="cup-4" class="cup-indicator">5</div>
+                    </div>
+                </div>
+
+                <div class="card lid-card">
+                    <div class="card-title">蓋子狀態監控</div>
+                    <div class="lid-stats">
+                        <div class="stat-box">
+                            <div class="stat-label">目前數量</div>
+                            <div id="lid-count" class="stat-number">--</div>
+                        </div>
+                        <div class="stat-box">
+                            <div class="stat-label">目標設定</div>
+                            <div id="lid-target" class="stat-number">--</div>
+                        </div>
+                    </div>
+                    <div id="lid-match-msg" class="match-msg">--</div>
+                </div>
+
+                <div id="hall-sensor" class="hall-status hall-inactive">
+                    取藥偵測：無訊號
+                </div>
+
+                <!-- 補藥大按鈕 -->
+                <button class="btn-refill-huge" onclick="openRefillWizard()">💊 開始補藥</button>
+            </section>
+
+            <!-- 2. 取藥紀錄 (History) -->
+            <section id="page-history" class="page">
+                <div class="card">
+                    <div class="card-title">近三天取藥紀錄</div>
+                    <div id="history-list" class="history-list">
+                        <p class="empty-msg">尚未載入紀錄...</p>
+                        <!-- 未來由 JS 產生紀錄項目 -->
+                    </div>
+                    <button class="btn-outline" onclick="loadMoreHistory()"
+                        style="width: 100%; margin-top: 15px;">載入更早紀錄</button>
+                </div>
+            </section>
+
+            <!-- 3. 出藥時間設定 (Settings) -->
+            <section id="page-settings" class="page">
+                <div class="card">
+                    <div class="card-title">⏰ 每日定時 (最多5組)</div>
+                    <p class="help-text">設定後，系統會自動將最早的時間排在第 1 杯。</p>
+                    <div class="alarm-list">
+                        <div class="alarm-row"><label>第 1 杯</label><input type="time" id="alarm-0"></div>
+                        <div class="alarm-row"><label>第 2 杯</label><input type="time" id="alarm-1"></div>
+                        <div class="alarm-row"><label>第 3 杯</label><input type="time" id="alarm-2"></div>
+                        <div class="alarm-row"><label>第 4 杯</label><input type="time" id="alarm-3"></div>
+                        <div class="alarm-row"><label>第 5 杯</label><input type="time" id="alarm-4"></div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-title">🎯 目標設定</div>
+                    <div class="target-setting">
+                        <label>預計藥杯總數</label>
+                        <input type="number" id="target-cups-input" min="0" max="5">
+                    </div>
+                </div>
+
+                <button class="btn-save" onclick="saveSettings()">💾 儲存設定</button>
+
+                <!-- 隱藏的手動控制入口 -->
+                <div class="dev-entry" onclick="promptDevLogin()">⚙️ 開發者手動控制</div>
+            </section>
+
+            <!-- 4. 手動控制 (Manual - 隱藏頁面) -->
+            <section id="page-manual" class="page">
+                <div class="card warning-card">
+                    ⚠️ 警告：此頁面僅供開發測試，手動操作可能會干擾正常出藥流程。
+                </div>
+
+                <p style="font-size: 0.8em; color: #888;">* 馬達運轉中請勿連續發送</p>
+
+                <div class="control-section">
+                    <div class="section-label">圓盤馬達 (M1)</div>
+                    <div class="control-group">
+                        <button class="btn-motor" onclick="sendCommand('M1_CW')">↻ 正轉</button>
+                        <button class="btn-motor" onclick="sendCommand('M1_CCW')">↺ 反轉</button>
+                    </div>
+                </div>
+
+                <div class="control-section">
+                    <div class="section-label">推桿馬達 (M2)</div>
+                    <div class="control-group">
+                        <button class="btn-motor" onclick="sendCommand('M2_UP')">⬆️ 上升</button>
+                        <button class="btn-motor" onclick="sendCommand('M2_DOWN')">⬇️ 下降</button>
+                    </div>
+                </div>
+
+                <div class="control-section">
+                    <div class="section-label">環境控制</div>
+                    <div class="control-group">
+                        <button class="btn-on" onclick="sendCommand('FAN_ON')">風扇 開</button>
+                        <button class="btn-off" onclick="sendCommand('FAN_OFF')">風扇 關</button>
+                        <button class="btn-on" onclick="sendCommand('LED_ON')">燈條 開</button>
+                        <button class="btn-off" onclick="sendCommand('LED_OFF')">燈條 關</button>
+                    </div>
+                </div>
+
+                <button class="btn-music" onclick="sendCommand('PLAY_MUSIC')">🎵 播放測試音效</button>
+
+                <div class="control-section" style="margin-top: 20px;">
+                    <button class="btn-home" onclick="sendCommand('HOME')">🏠 回歸原點</button>
+                    <button class="btn-test" onclick="sendCommand('TEST_DISPENSE')">🧪 出藥測試</button>
+                </div>
+
+                <div class="control-section" style="margin-top: 20px;">
+                    <div class="section-label">🎬 Demo 展示模式</div>
+                    <div class="control-group">
+                        <button class="btn-demo-a" onclick="sendCommand('DEMO_A')">Demo A (反轉)</button>
+                        <button class="btn-demo-b" onclick="sendCommand('DEMO_B')">Demo B (正轉)</button>
+                    </div>
+                </div>
+            </section>
+
+        </main>
+
+        <!-- 底部導覽列 -->
+        <nav class="bottom-nav">
+            <a href="#" class="nav-item active" onclick="switchPage('dashboard', '💊 監控首頁')">
+                <span class="icon">🏠</span>
+                <span>首頁</span>
+            </a>
+            <a href="#" class="nav-item" onclick="switchPage('history', '📝 取藥紀錄')">
+                <span class="icon">📋</span>
+                <span>紀錄</span>
+            </a>
+            <a href="#" class="nav-item" onclick="switchPage('settings', '⏰ 出藥時間設定')">
+                <span class="icon">⚙️</span>
+                <span>設定</span>
+            </a>
+        </nav>
+
+        <!-- 5. 補藥模式 (全螢幕 Wizard 蓋板) -->
+        <div id="refill-wizard" class="wizard-overlay" style="display: none;">
+            <div class="wizard-content">
+                <h2>♻️ 補藥模式</h2>
+                <div class="wizard-step">
+                    <div class="step-icon">📦</div>
+                    <p class="step-desc">請在對應位置放入新的藥杯，並蓋上蓋子。</p>
+                    <p class="step-note">(此時機器已鎖定，安全無虞)</p>
+                </div>
+                <button class="btn-wizard-done" onclick="finishRefillWizard()">✅ 補藥完成 (重新待機)</button>
+                <button class="btn-wizard-cancel" onclick="cancelRefillWizard()">取消</button>
+            </div>
+        </div>
+
+        <!-- 密碼輸入對話框 (隱藏) -->
+        <div id="password-dialog" class="dialog-overlay" style="display: none;">
+            <div class="dialog-box">
+                <h3>輸入開發者密碼</h3>
+                <input type="password" id="dev-password" placeholder="請輸入密碼">
+                <div class="dialog-actions">
+                    <button onclick="closePasswordDialog()" class="btn-cancel">取消</button>
+                    <button onclick="checkPassword()" class="btn-confirm">確認</button>
                 </div>
             </div>
-            <div id="lid-match-msg" style="text-align: center; margin-top: 5px; font-weight: bold;">--</div>
         </div>
-
-        <div id="hall-sensor" class="hall-status hall-inactive">
-            單點霍爾：無訊號
-        </div>
-
-        <h2>手動控制 (Control)</h2>
-
-        <p style="font-size: 0.8em; color: #888;">* 馬達運轉中請勿連續發送指令</p>
-
-        <div style="margin-bottom: 5px;">圓盤馬達 (M1)</div>
-        <div class="control-group">
-            <button class="btn-motor" onclick="sendCommand('M1_CW')">↻ 正轉</button>
-            <button class="btn-motor" onclick="sendCommand('M1_CCW')">↺ 反轉</button>
-        </div>
-
-        <div style="margin-bottom: 5px;">推桿馬達 (M2)</div>
-        <div class="control-group">
-            <button class="btn-motor" onclick="sendCommand('M2_UP')">⬆️ 上升</button>
-            <button class="btn-motor" onclick="sendCommand('M2_DOWN')">⬇️ 下降</button>
-        </div>
-
-        <div style="margin-bottom: 5px;">環境控制</div>
-        <div class="control-group">
-            <button class="btn-on" onclick="sendCommand('FAN_ON')">風扇 開</button>
-            <button class="btn-off" onclick="sendCommand('FAN_OFF')">風扇 關</button>
-            <button class="btn-on" onclick="sendCommand('LED_ON')">燈條 開</button>
-            <button class="btn-off" onclick="sendCommand('LED_OFF')">燈條 關</button>
-        </div>
-
-        <button class="btn-music" onclick="sendCommand('PLAY_MUSIC')">🎵 播放測試音效</button>
-
-        <div style="margin-top: 20px; margin-bottom: 5px;">系統控制</div>
-        <button class="btn-home" onclick="sendCommand('HOME')">🏠 回歸原點</button>
-        <button class="btn-test" onclick="sendCommand('TEST_DISPENSE')">🧪 出藥測試</button>
-
-        <div style="margin-top: 20px; margin-bottom: 5px; color: #00796b;">⏰ 設定</div>
-        <div class="control-group" style="display: block;">
-            <div style="margin-bottom: 10px;">
-                <label>每日定時 (最多5組):</label>
-                <div class="alarm-inputs">
-                    <input type="time" id="alarm-0">
-                    <input type="time" id="alarm-1">
-                    <input type="time" id="alarm-2">
-                    <input type="time" id="alarm-3">
-                    <input type="time" id="alarm-4">
-                </div>
-            </div>
-
-            <div style="margin-bottom: 10px;">
-                <label>預計藥杯數 (目標):</label>
-                <input type="number" id="target-cups-input" min="0" max="5" style="width: 50px; padding: 5px;">
-            </div>
-
-            <button class="btn-save" onclick="saveSettings()">💾 儲存設定</button>
-        </div>
-
-        <div style="margin-top: 20px; margin-bottom: 5px; color: #9c27b0;">🎬 Demo 展示模式</div>
-        <div class="control-group">
-            <button class="btn-test" onclick="sendCommand('DEMO_A')"
-                style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">🎬 Demo A (反轉)</button>
-            <button class="btn-test" onclick="sendCommand('DEMO_B')"
-                style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);">🎬 Demo B (正轉)</button>
-        </div>
-        <p style="font-size: 0.75em; color: #999; margin-top: 5px;">
-            A: 推桿歸零 → 圓盤反轉一格 → 推桿推到最高<br>
-            B: 推桿歸零 → 圓盤正轉一格 → 推桿推到最高
-        </p>
 
     </div>
+
+    <!-- 隱藏的 Loading，給 ui.js 相容用 -->
+    <p id="loading" style="display: none;">連線資料庫中...</p>
 
     <!-- 外部 JavaScript（順序重要：api.js 先載入）-->
     <script src="js/api.js"></script>
