@@ -1,0 +1,16 @@
+--- /Users/cindy/Desktop/P505-藥盒/control_app/website_control/website_control.ino
++++ /Users/cindy/Desktop/P505-藥盒/control_app/website_control/website_control.ino
+@@ -279,11 +279,11 @@
+   // Serial.printf("蓋子偵測: %d 杯 (目標: %d) -> %s\n", detectedCount, targetCups, isMatch ? "符合" : "不符");
+   
+   // 印出五點偵測數值
+-  /*Serial.print("📊 五點感測 ADC: ");
++  Serial.print("📊 五點感測 ADC: ");
+   Serial.print(currentADC);
+   Serial.print(" | 藥杯狀態: ");
+   for (int j = 0; j < 5; j++) {
+     Serial.print(cupState[j] ? "🟢" : "⚪");
+   }
+-  Serial.println();*/
++  Serial.println();
+ }

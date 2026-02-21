@@ -3,4 +3,4 @@
 ## 20260217
 - 完成初版流程圖
 - 完成感測器校正程式碼，需要連接實機測試，紀錄相關參數
-- 下一步：0220實機測試，校正感測器參數，確認基本功能
+- 下一步：0220實機測試，校正感測器參數，確認基本功能Hardware issue confirmed: 33k resistor (Cup 1) is not connected to Pin 4 (Open circuit).
