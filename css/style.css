@@ -551,3 +551,92 @@ button:active {
     border: 1px solid #ccc;
     color: #555;
 }
+
+/* --- 全域警告系統 Banner --- */
+.alert-banner {
+    position: fixed;
+    top: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 100%;
+    max-width: 600px;
+    background-color: var(--danger);
+    color: white;
+    padding: 12px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    z-index: 1000;
+    font-weight: bold;
+    box-shadow: 0 4px 10px rgba(244, 67, 54, 0.4);
+    animation: slideDownAlert 0.3s ease;
+}
+
+@keyframes slideDownAlert {
+    from {
+        top: -60px;
+    }
+
+    to {
+        top: 0;
+    }
+}
+
+.alert-banner span {
+    flex: 1;
+    font-size: 0.95rem;
+    line-height: 1.4;
+}
+
+.alert-btn {
+    background: white;
+    color: var(--danger);
+    padding: 6px 12px;
+    border-radius: 4px;
+    font-size: 0.85rem;
+    margin-left: 10px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    border: none;
+    cursor: pointer;
+    font-weight: bold;
+}
+
+.alert-btn-close {
+    background: transparent;
+    color: white;
+    padding: 6px;
+    font-size: 1.2rem;
+    margin-left: 10px;
+    box-shadow: none;
+    border: none;
+    cursor: pointer;
+}
+
+/* --- 動態補藥清單樣式 --- */
+.refill-dynamic-list {
+    list-style: none;
+    text-align: left;
+    background: #f8f9fa;
+    border-radius: 8px;
+    padding: 15px;
+    margin-bottom: 20px;
+    border: 1px solid #e0e0e0;
+}
+
+.refill-dynamic-list li {
+    font-size: 1rem;
+    color: var(--text-main);
+    padding: 8px 0;
+    border-bottom: 1px dashed #ccc;
+    display: flex;
+    justify-content: space-between;
+}
+
+.refill-dynamic-list li:last-child {
+    border-bottom: none;
+}
+
+.refill-dynamic-list .cup-num {
+    font-weight: bold;
+    color: var(--primary-dark);
+}

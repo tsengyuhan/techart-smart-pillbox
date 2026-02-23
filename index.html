@@ -15,6 +15,15 @@
 </head>
 
 <body>
+    <!-- 🟢 全域警告系統 Banner 🟢 -->
+    <div id="global-alert-banner" class="alert-banner" style="display: none;">
+        <span id="alert-message">⚠️ 系統警告</span>
+        <button id="alert-confirm-btn" class="alert-btn" onclick="confirmHardwareAlert()"
+            style="display: none;">確認</button>
+        <button id="alert-dismiss-btn" class="alert-btn-close" onclick="dismissAlert()"
+            style="display: none;">✖</button>
+    </div>
+
     <div class="app-container">
         <!-- 頂部標題列 -->
         <header class="app-header">
@@ -106,8 +115,10 @@
                 <div class="card">
                     <div class="card-title">🎯 目標設定</div>
                     <div class="target-setting">
-                        <label>預計藥杯總數</label>
-                        <input type="number" id="target-cups-input" min="0" max="5">
+                        <label>預計藥杯總數 (自動計算)</label>
+                        <div id="target-cups-display" class="stat-number"
+                            style="font-size: 1.5rem; font-weight: bold; color: var(--primary);">0</div>
+                        <input type="hidden" id="target-cups-input" value="0">
                     </div>
                 </div>
 
@@ -192,6 +203,12 @@
                 <div class="wizard-step">
                     <div class="step-icon">📦</div>
                     <p class="step-desc">請在對應位置放入新的藥杯，並蓋上蓋子。</p>
+
+                    <!-- 動態產生的補藥清單 -->
+                    <ul id="refill-steps-list" class="refill-dynamic-list">
+                        <!-- 由 ui.js 動態填入 -->
+                    </ul>
+
                     <p class="step-note">(此時機器已鎖定，安全無虞)</p>
                 </div>
                 <button class="btn-wizard-done" onclick="finishRefillWizard()">✅ 補藥完成 (重新待機)</button>

@@ -50,6 +50,35 @@ function checkPassword() {
 // --- 補藥流程 (Refill Wizard) ---
 function openRefillWizard() {
     document.getElementById('refill-wizard').style.display = 'flex';
+
+    // 動態產生補藥清單
+    const stepsList = document.getElementById('refill-steps-list');
+    if (stepsList) {
+        stepsList.innerHTML = ''; // 清空舊的
+        const times = [];
+        for (let i = 0; i < 5; i++) {
+            const val = document.getElementById('alarm-' + i).value;
+            if (val) times.push(val);
+        }
+
+        // 排序時間
+        times.sort((a, b) => {
+            const [h1, m1] = a.split(':').map(Number);
+            const [h2, m2] = b.split(':').map(Number);
+            return (h1 * 60 + m1) - (h2 * 60 + m2);
+        });
+
+        if (times.length === 0) {
+            stepsList.innerHTML = '<li><span class="cup-num">⚠️ 尚未設定任何出藥時間</span></li>';
+        } else {
+            times.forEach((time, index) => {
+                const li = document.createElement('li');
+                li.innerHTML = `<span class="cup-num">第 ${index + 1} 杯</span> <span>放入 ${time} 的藥物</span>`;
+                stepsList.appendChild(li);
+            });
+        }
+    }
+
     // 通知 ESP32 機器歸零並進入補藥模式
     if (typeof sendCommand === 'function') {
         sendCommand('ENTER_REFILL');
@@ -112,9 +141,71 @@ function updateNextAlarmDisplay(alarmsStr) {
     document.getElementById('next-alarm-display').innerText = nextAlarm;
 }
 
+// --- 全域警告系統 (Global Alerts) ---
+let currentAlertCode = null;
+
+function showGlobalAlert(message, showConfirmBtn = false, alertCode = null) {
+    const banner = document.getElementById('global-alert-banner');
+    const msgEl = document.getElementById('alert-message');
+    const confirmBtn = document.getElementById('alert-confirm-btn');
+    const dismissBtn = document.getElementById('alert-dismiss-btn');
+
+    if (banner && msgEl) {
+        msgEl.innerText = message;
+        currentAlertCode = alertCode;
+
+        if (showConfirmBtn) {
+            confirmBtn.style.display = 'inline-block';
+            dismissBtn.style.display = 'none'; // 強制確認不允許單純關閉
+        } else {
+            confirmBtn.style.display = 'none';
+            dismissBtn.style.display = 'inline-block';
+        }
+
+        banner.style.display = 'flex';
+    }
+}
+
+function dismissAlert() {
+    const banner = document.getElementById('global-alert-banner');
+    if (banner) banner.style.display = 'none';
+    currentAlertCode = null;
+}
+
+function confirmHardwareAlert() {
+    // 傳送硬體解鎖指令
+    if (typeof sendCommand === 'function') {
+        // 根據不同錯誤發送不同的對應指令 (預設送 CLEAR_ERROR)
+        const cmd = currentAlertCode === 'pusher_stuck' ? 'CLEAR_PUSHER_ERROR' : 'CLEAR_ERROR';
+        sendCommand(cmd);
+    }
+    dismissAlert();
+}
+
 // --- 回呼函式：Firebase 監控資料更新時由 api.js 呼叫 ---
 function onMonitorUpdate(data) {
-    // document.getElementById('loading').style.display = 'none'; // DOM 裡已隱藏
+    // 處理全域警告 (Error States from ESP32)
+    if (data.error_state) {
+        if (data.error_state === 'pusher_stuck') {
+            showGlobalAlert("⚠️ 請確認推桿是否在圓盤下方，並點擊確認", true, 'pusher_stuck');
+        } else if (data.error_state === 'lid_error') {
+            showGlobalAlert("🚨 蓋子狀態異常！(開啟超過1分鐘)");
+        } else if (data.error_state === 'cup_not_taken') {
+            // 對應流程圖：超過3分鐘忘了吃藥，強制回收
+            showGlobalAlert(`🚨 強制回收：位置 ${data.last_active_cup || '?'} 藥杯未被取走！`);
+        } else if (data.error_state === 'refill_cups_left') {
+            showGlobalAlert("⚠️ 補藥完成，但偵測到尚有空杯未收走！");
+        } else if (data.error_state === 'previous_cup_left') {
+            showGlobalAlert("⚠️ 此藥杯上次未取走，仍繼續出藥");
+        }
+    } else {
+        // 沒有錯誤就確保 Banner 關閉 (除非使用者還沒按確認)
+        const banner = document.getElementById('global-alert-banner');
+        const confirmBtn = document.getElementById('alert-confirm-btn');
+        if (banner && confirmBtn && confirmBtn.style.display === 'none') {
+            dismissAlert();
+        }
+    }
 
     // 更新溫度
     if (data.temp) {
@@ -188,6 +279,19 @@ function updateConnectionStatus(isOnline) {
     }
 }
 
+// --- 自動計算藥杯總數 ---
+function updateTargetCupsCount() {
+    let count = 0;
+    for (let i = 0; i < 5; i++) {
+        const val = document.getElementById('alarm-' + i).value;
+        if (val) count++;
+    }
+    const displayEl = document.getElementById('target-cups-display');
+    const inputEl = document.getElementById('target-cups-input');
+    if (displayEl) displayEl.innerText = count;
+    if (inputEl) inputEl.value = count;
+}
+
 // --- 儲存設定（UI 包裝函式，讀取表單後呼叫 api.js）---
 function saveSettings() {
     // 讀取鬧鐘時間
@@ -197,7 +301,8 @@ function saveSettings() {
         if (val) times.push(val);
     }
 
-    // 讀取目標數量
+    // 重新計算目標數量 (確保與畫面一致)
+    updateTargetCupsCount();
     const targetCups = parseInt(document.getElementById('target-cups-input').value) || 0;
 
     // 透過 api.js 寫入 Firebase
@@ -231,10 +336,8 @@ function loadSettings() {
                 updateNextAlarmDisplay(alarmsStr);
             }
 
-            // 填入目標數量
-            if (targetCups !== null) {
-                document.getElementById('target-cups-input').value = targetCups;
-            }
+            // 更新目標數量 (自動計算)
+            updateTargetCupsCount();
         });
     }
 }
@@ -248,6 +351,15 @@ function loadMoreHistory() {
 // --- 頁面載入時執行 ---
 document.addEventListener('DOMContentLoaded', () => {
     loadSettings();
+
+    // 綁定鬧鐘輸入的 change 以及 input 事件來自動計算藥杯數
+    for (let i = 0; i < 5; i++) {
+        const el = document.getElementById('alarm-' + i);
+        if (el) {
+            el.addEventListener('change', updateTargetCupsCount);
+            el.addEventListener('input', updateTargetCupsCount);
+        }
+    }
 
     // 每分鐘更新一次「下一次出藥時間」的顯示
     setInterval(() => {
