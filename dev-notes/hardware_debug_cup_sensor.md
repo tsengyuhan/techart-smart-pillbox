@@ -81,3 +81,4 @@ ESP32-S3 主板的 3.3V 與 GND 相通是極嚴重的硬體異常，這會導致
     *   在斷電狀態下，一樣把電表探棒固定在主板的 3.3V 與 GND。
     *   開始「一個一個」把剛剛拔掉的模組 / 電線插回去。
     *   當插到哪一條線時電表突然「逼逼叫」，那條線或那個模組就是導致整個系統短路的罪魁禍首！
+User reported 3.3V to GND resistance is ~8kΩ. This confirms NO DEAD SHORT.
